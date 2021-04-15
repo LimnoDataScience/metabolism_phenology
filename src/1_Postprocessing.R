@@ -17,7 +17,6 @@ library(corrplot)
 library(trend)
 library(broom)
 library(purrr)
-library(NTLlakeloads)
 
 calc_fit <- function(mod_data, obs_data){
   obs <- obs_data 
@@ -44,6 +43,9 @@ interpolate_nearest.neighbor <- function(data){
 
 lake.list <- c('Allequash', 'BigMuskellunge', 'Crystal', 'Fish', 'Mendota',
                'Monona', 'Sparkling', 'Trout')
+lake.list.Abr <- c('Allequash' = 'AL', 'BigMuskellunge' = 'BM', 'Crystal' = 'CR', 
+                   'Fish' = 'FI', 'Mendota' = 'ME',
+                   'Monona' = 'MO', 'Sparkling' = 'SP', 'Trout' = 'TR')
 
 df.estimations <- list()
 all.sigma <- c()
@@ -339,106 +341,15 @@ for (lake.id in lake.list){
   write_csv(x = lake.odem, file = paste0('Processed_Output/',tolower(lake.id),'_fluxes.csv'),col_names = T)
   
   # export fit data to list
-  fit.data[[lake.id]]  = data.frame(obsdata = lake.odem$DO_obs_epi, moddata = lake.odem$DO_epi, iddata = lake.id, type = 'Epilimnion') %>% 
-    bind_rows(data.frame(obsdata = lake.odem$DO_obs_hyp, moddata = lake.odem$DO_hyp, iddata = lake.id, type = 'Hypolimnion')) %>% 
+  fit.data[[lake.id]]  = data.frame(obsdata = lake.odem$DO_obs_epi, simdata = lake.odem$DO_epi, id = lake.id, type = 'Epilimnion') %>% 
+    bind_rows(data.frame(obsdata = lake.odem$DO_obs_hyp, simdata = lake.odem$DO_hyp, id = lake.id, type = 'Hypolimnion')) %>% 
     na.omit()
 }
 fitdata = bind_rows(fit.data)
+write_csv(fitdata, 'Processed_Output/fitdata.csv')
 
 
-g.fits <- setNames(data.frame(matrix(ncol = 5, nrow = 8)), c('id', 'MAE', 'NSE', 'RMSE', 'R2'))
-g.fits$id = unique(fitdata$id)
-RMSE = fitdata %>%
-  group_by(id) %>%
-  summarise(RMSE = sqrt(sum((obsdata-simdata)**2)/length(obsdata)) * 1/1000)
-MAE = fitdata %>%
-  group_by(id) %>%
-  summarise(MAE = sum(abs(obsdata-simdata))/length(obsdata) * 1/1000)
-NSE = fitdata %>%
-  group_by(id) %>%
-  summarise(NSE = 1- sum((obsdata-simdata)**2)/sum((obsdata-mean(obsdata))**2))
-
-R2 = fitdata %>%
-  group_by(id) %>%
-  summarise(r2 = cor(obsdata,simdata, method = 'pearson'))
-g.fits$RMSE = RMSE$RMSE
-g.fits$MAE = MAE$MAE
-g.fits$NSE = NSE$NSE
-g.fits$R2 = R2$r2
-print(g.fits)
-
-fitdata$RMSE =NA; fitdata$MAE =NA; fitdata$NSE =NA; fitdata$R2 =NA
-for (i in unique(fitdata$id)){
-  idx = which(i == fitdata$id)
-  idy = which(i == g.fits$id)
-  fitdata$RMSE[idx] = rep(g.fits$RMSE[idy], length(idx))
-  fitdata$MAE[idx] = rep(g.fits$MAE[idy], length(idx))
-  fitdata$NSE[idx] = rep(g.fits$NSE[idy], length(idx))
-  fitdata$R2[idx] = rep(g.fits$R2[idy], length(idx))
-}
-fitdata=fitdata %>% 
-  arrange(factor(id, levels = (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","","Fish","Mendota","Monona"))))
-g.fits$id <- factor(g.fits$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","Fish","Mendota","Monona")))
-fitdata$id <- factor(fitdata$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","","Fish","Mendota","Monona")))
-
-g1 <- ggplot(fitdata, aes(x=obsdata/1000, y=simdata/1000, col = type))+
-  geom_point(alpha = 0.5) +
-  ylab(expression("Simulated DO conc. [g DO"*~m^{-3}*"]")) +
-  xlab(expression("Observed DO conc. [g DO"*~m^{-3}*"]")) +
-  # scale_color_brewer(palette="Dark2") +
-  scale_color_manual(values = rep(c('red1','lightblue3'),1)) +
-  geom_text(
-    data    = g.fits,
-    mapping = aes(x = 0.1, y = 12, label = paste0('MAE: ',round((MAE),2))),
-    hjust   = -0.1,
-    vjust   = -1,
-    col = 'black'
-  ) +
-  geom_text(
-    data    = g.fits,
-    mapping = aes(x = 4.3, y = 12, label =  paste0(', RMSE: ',round((RMSE),2))),
-    hjust   = -0.1,
-    vjust   = -1,
-    col = 'black'
-  ) +
-  geom_text(
-    data    = g.fits,
-    mapping = aes(x = 0.1, y = 10, label =  paste0('NSE: ',round((NSE),2))),
-    hjust   = -0.1,
-    vjust   = -1,
-    col = 'black'
-  ) +
-  geom_text(
-    data    = g.fits,
-    mapping = aes(x = 4.3, y = 10, label =  paste0(', R2: ',round((R2),2))),
-    hjust   = -0.1,
-    vjust   = -1,
-    col = 'black'
-  ) +
-  facet_wrap(.~id, ncol = 3, drop = FALSE)+
-  xlim(0,15.5)+ ylim(0,15.5)+
-  theme_minimal()+
-  theme(legend.text = element_text(size = 11), axis.text.x= element_text(size = 20), plot.title = element_text(size = 20),
-        axis.text.y= element_text(size = 20), text = element_text(size = 20), legend.title = element_blank(), strip.text =element_text(size = 20),
-        legend.position = 'bottom');g1
-
-library(gridExtra)
-library(grid)
-g <- ggplotGrob(g1)
-## remove empty panels
-g$grobs[names(g$grobs) %in% c("panel3", "panel9", "strip_t3", "strip_t9")] <- NULL
-## remove them from the layout
-g$layout <- g$layout[!(g$layout$name %in% c("panel-3", "panel-9", 
-                                            "strip_t-3", "strip_t-9")),]
-## move axis closer to panel
-g$layout[g$layout$name == "axis_b-9", c("t", "b")] = c(9,9)
-grid.newpage()
-grid.draw(g)
-
-ggsave(file = 'Figures/Fig_3.png', g1, dpi = 300, width =250, height = 250,
-       units='mm')
-
-
+## Compute annual, cumulative, and total fluxes ###
 annual.flux = list()
 cum.flux = list()
 cum.flux_max = list()
@@ -723,14 +634,15 @@ for (lake.id in lake.list){
   legend('topright',col=c('red','red','blue'),lty=c(1,NaN,1),pch=c(NaN,21,NaN),c('Modeled O2','Obs O2','O2sat'))
   
   
-  odem.flux[[lake.id]] = data.frame('year' = as.Date(odem_stan$datetime),
+  odem.flux[[lake.id]] = data.frame(date = as.Date(odem_stan$datetime),
                                       'Atm' = Fatm,
                                       'Nep' = Fnep,
                                       'Min' = Fmin,
                                       'Sed' = Fsed,
                                       'FnepTot' = Fnep + Fmin - Fsed,
                                       'FAll' = Fatm + Fnep + Fmin + Fsed,
-                                      'id' = lake.id)[mindata:maxdata,]
+                                      'id' = lake.id,
+                                      'lake' = lake.list.Abr[lake.id])[mindata:maxdata,]
   
   annual.flux[[lake.id]] = data.frame('year' = uYears[iYearsOnly],
                            'Atm' = yFatm[iYearsOnly],
@@ -775,6 +687,7 @@ for (lake.id in lake.list){
                           'id' = lake.id,
                           'nse' =nse)
 }
+
 annual.flux = bind_rows(annual.flux)
 cum.flux = bind_rows(cum.flux)
 cum.flux_max = bind_rows(cum.flux_max)
@@ -782,90 +695,11 @@ cum.flux_min = bind_rows(cum.flux_min)
 odem.flux = bind_rows(odem.flux)
 total.flux= bind_rows(total.flux)
 
-write_csv(odem.flux, 'Processed_Output/odemFluxes.csv')
-
-library(patchwork)
-total.flux$TP = c(15.7, 8.6, 5.6, 22.4, 109.5, 73.5, 7.2, 6.9)#, 40.3)
-
-name.chane.annual.flux <- annual.flux
-colnames(name.chane.annual.flux) <- c('Year', 'ATM', 'NEP_epi', 'NEP_hypo', 'SED', 'NEP_tot', 'ENTR_epi',
-                                      'ENTR_hypo', 'ID')
-
-
-colnames(cum.flux) <- c('time', 'Atm', 'NEP,epi', 'NEP,hypo','Sed','Total NEP', 'id')
-cum.flux$Sed = cum.flux$Sed * (-1)
-m.cum.flux =reshape2::melt(cum.flux[,-c(1)])
-m.cum.flux$time = cum.flux$time
-
-colnames(cum.flux_max) <- c('time', 'Atm', 'NEP,epi', 'NEP,hypo','Sed','Total NEP', 'id')
-cum.flux_max$Sed = cum.flux_max$Sed * (-1)
-m.cum.flux_max =reshape2::melt(cum.flux_max[,-c(1)])
-m.cum.flux_max$time = cum.flux_max$time
-
-colnames(cum.flux_min) <- c('time', 'Atm', 'NEP,epi', 'NEP,hypo','Sed','Total NEP', 'id')
-cum.flux_min$Sed = cum.flux_min$Sed * (-1)
-m.cum.flux_min =reshape2::melt(cum.flux_min[,-c(1)])
-m.cum.flux_min$time = cum.flux_min$time
-
-m.cum.flux.extr = m.cum.flux_min
-colnames(m.cum.flux.extr) = c('id', 'variable', 'min', 'time')
-m.cum.flux.extr$max = m.cum.flux_max$value
-m.cum.flux.extr$value = m.cum.flux$value
-
-idx.year = c()
-for (i in seq(1996,2019,1)){
-  idy = which(m.cum.flux.extr$time > i)
-  idz = match(m.cum.flux.extr$time[idy[which(abs(m.cum.flux.extr$time[idy] - i) == min(abs(m.cum.flux.extr$time[idy] - i)))]], 
-              m.cum.flux.extr$time)
-  idx.year = append(idx.year,
-                    idy[which(abs(m.cum.flux.extr$time[idy] - i) == min(abs(m.cum.flux.extr$time[idy] - i)))])
-  print(which(abs(m.cum.flux.extr$time[idy] - i) == min(abs(m.cum.flux.extr$time[idy] - i))))
-  if (length(which(abs(m.cum.flux.extr$time[idy] - i) == min(abs(m.cum.flux.extr$time[idy] - i)))) != 40){
-    print(i)
-  }
-}
-red.m.cum.flux.extr = m.cum.flux.extr[idx.year,]
-
-g1.north=ggplot(subset(m.cum.flux, id == c('Allequash', 
-                                           'BigMuskellunge',
-                                           'Crystal',
-                                           'Sparkling',
-                                           'Trout')), aes(time, value/1000, col = variable, linetype = variable)) +
-  geom_line(size=1.5) +
-
-  ylim(c(-8,10))+
-  # ylim(c(-20,20))+
-  facet_wrap(~id) +
-  scale_linetype_manual(values = c(1,1,1,1,2))+
-  ylab(expression("Cum. fluxes [kg DO"*~m^{-2}*""*~d^{-1}*"]")) +
-  xlab('') +
-  scale_color_brewer(palette="Set1") +
-  theme_minimal()+
-  theme(legend.text = element_text(size = 30), axis.text.x= element_text(size = 30, angle = 90, vjust = 0.5, hjust=1), plot.title = element_text(size = 30),
-        axis.text.y= element_text(size = 30), text = element_text(size = 30), legend.title = element_blank(), strip.text =element_text(size = 30),
-        legend.position = 'none');g1.north
-g1.south=ggplot(subset(m.cum.flux, id == c('Fish',
-                                           'Mendota',
-                                           'Monona')), aes(time, value/1000, col = variable, linetype = variable)) +
-  geom_line(size=1.5) +
-  facet_wrap(~id) +
- ylim(c(-8,10))+
-  # ylim(c(-25,25))+
-  # ylim(c(-8,10))+
-  scale_linetype_manual(values = c(1,1,1,1,2))+
-  ylab(expression("Cum. fluxes [kg DO"*~m^{-2}*""*~d^{-1}*"]")) +
-  xlab('') +
-  scale_color_brewer(palette="Set1") +
-  theme_minimal()+
-  theme(legend.text = element_text(size = 30), axis.text.x= element_text(size = 30, angle = 90, vjust = 0.5, hjust=1), plot.title = element_text(size = 30),
-        axis.text.y= element_text(size = 30), text = element_text(size = 30), legend.title = element_blank(), strip.text =element_text(size = 30),
-        legend.position = 'bottom');g1.south
-
-g1 <- g1.north / g1.south+
-  plot_annotation(tag_levels = 'A')+
-  plot_layout(heights = (c(2, 1)));g1
-ggsave(file = 'Figures/Fig_4.png', g1, dpi = 300, width =450, height = 350,
-       units='mm')
+write_csv(odem.flux, 'Processed_Output/Fluxes_dailyFluxes.csv')
+write_csv(cum.flux, 'Processed_Output/Fluxes_cumFlux.csv')
+write_csv(cum.flux_min, 'Processed_Output/Fluxes_cumFluxmin.csv')
+write_csv(cum.flux_max, 'Processed_Output/Fluxes_cumFluxmax.csv')
+write_csv(annual.flux, 'Processed_Output/Fluxes_annualFluxes.csv')
 
 
 
@@ -1319,35 +1153,7 @@ ggsave(file = paste0('Figures/Fig_2.png'), g, dpi = 300, width =266, height = 30
        units='mm')
 
 
-scale2 <- function(x, na.rm = TRUE) (x - mean(x, na.rm = na.rm)) / sd(x, na.rm)
 
-subchain <- . %>% 
-  select(lakeid, year4, mean.var) %>% 
-  left_join(do.decompose(.))  %>% 
-  mutate(month = month(year4), year = year(year4), date = as.Date(year4)) %>% 
-  group_by(lakeid, year, month) %>% 
-  summarise(mean.var = mean(.trend), date = first(date)) %>% 
-  left_join(ntl.monthly) %>% 
-  group_by(lakeid) %>% 
-  mutate_if(is.numeric, scale2) #scale data
-
-do.decompose <- function(df) {
-  df2 = df %>% 
-    group_by(lakeid, year = year(year4)) %>% mutate(n = n()) %>% 
-    filter(n >= 365) 
-  
-  trend = df2 %>% 
-    nest(data = -lakeid) %>% 
-    dplyr::mutate(
-      ts =  purrr::map(data, ~ ts(.x$mean.var, start = c(1982,1), frequency = 365)),
-      decomp = purrr::map(ts, ~ decompose(.x, type = 'additive')),
-      tidied = purrr::map(decomp, augment)
-    ) %>% 
-    unnest(tidied) %>% ungroup() %>% 
-    mutate(year4 = df2$year4) %>% 
-    select(lakeid, year4, .trend)
-  return(trend)
-}
 
 source('src/interpFunctions.R')
 
@@ -1535,7 +1341,6 @@ ggplot(LTERnutrients) +
 
 
 
-fluxes = read_csv('Processed_Output/odemFluxes.csv')
 ntl.monthly = read_csv('Processed_Output/LTERdecomposeNutrients.csv')
 
 
@@ -1556,92 +1361,4 @@ ggplot(test.df) +
   theme(axis.title.x = element_blank(), 
         legend.position = 'bottom')
 
-flux.nepTot = fluxes %>% rename(year4 = date, mean.var = FnepTot) %>% subchain() %>% 
-  ungroup() %>% 
-  mutate(Lake = factor(lakeid, levels = c('AL','BM', 'CR', 'SP', 'TR','ME','MO','FI'))) %>%
-  mutate(region = as.factor(if_else(lakeid %in% c('BM', 'TR', 'CR', 'SP', 'AL', 'N','S'), 'North','South')))
-
-# Plot 
-p1 = ggplot(flux.nepTot) +
-  # geom_point(aes(x = date, y = mean.var, col = lakeid), pch = 16, size = 0.3) +
-  geom_path(aes(x = date, y = mean.var, col = Lake), size = 0.5) +
-  scale_color_brewer(palette = 'Spectral') +
-  facet_wrap(~region, nrow = 2) +
-  theme_bw(base_size = 8) +
-  ylab('Scaled trend signal of total NEP flux') +
-  # theme(axis.title.x = element_blank(), 
-  #       legend.position = 'bottom',
-  #       legend.title=element_blank(),
-  #       legend.margin = margin(1, 1, 1, 1),
-  #       legend.key.size = unit(0.3, "cm")) 
-  theme(axis.title.x = element_blank(), 
-        legend.box.background = element_rect(colour = "black"),
-        legend.key.width =unit(0.3,"cm"),
-        legend.key.height = unit(0.2, "cm"),
-        legend.spacing.x = unit(0.2, 'cm'),
-        legend.spacing.y = unit(0.1, 'cm'),
-        legend.position=c(.1,.2),
-        #legend.position = 'bottom',
-        # legend.title=element_blank());p1
-  );p1
-
-
-ggsave(p1, filename = 'Figures/fluxnep.pdf',width = 4, height = 4, dpi = 500)
-
-
-flux.wide = flux.nepTot %>% select(lakeid, date, mean.var) %>% 
-  pivot_wider(names_from = lakeid, values_from = mean.var, values_fn = mean) %>% 
-  select(-date) %>% 
-  select('AL','BM', 'CR', 'SP', 'TR','ME','MO','FI')
-# Compute a correlation matrix
-cor.mat <- flux.wide %>% cor(use = 'complete.obs')
-round(cor.mat,2)
-
-cor.mtest <- function(mat, ...) {
-  mat <- as.matrix(mat)
-  n <- ncol(mat)
-  p.mat<- matrix(NA, n, n)
-  diag(p.mat) <- 0
-  for (i in 1:(n - 1)) {
-    for (j in (i + 1):n) {
-      tmp <- cor.test(mat[, i], mat[, j], ...)
-      p.mat[i, j] <- p.mat[j, i] <- tmp$p.value
-    }
-  }
-  colnames(p.mat) <- rownames(p.mat) <- colnames(mat)
-  p.mat
-}
-# matrix of the p-value of the correlation
-p.mat <- cor.mtest(flux.wide)
-head(p.mat[, 1:5])
-
-
-col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
-
-dd <- dist(cor.mat, method = "euclidean")
-hc <- hclust(dd, method = "ward.D2")
-
-library("ggdendro")
-g2 <- ggdendrogram(hc) +
-  theme_bw(base_size = 8) +
-  theme(axis.title.y=element_blank(),
-        axis.text.y=element_blank(),
-        axis.ticks.y=element_blank())+
-  xlab('') + ylab(''); g2
-ggsave(g2, filename = 'Figures/fluxnep_dendro.pdf',width = 3, height = 1, dpi = 500)
-
-
-pdf(file = "Figures/fluxCorr.pdf", width = 3, height = 3)
-p.corr = corrplot(cor.mat, method = 'color', col = col(200),
-                  type="full", order="hclust",
-                  hclust.method = 'ward.D',
-                  addCoef.col = "black", # Add coefficient of correlation
-                  tl.col="black", tl.srt=45, #Text label color and rotation
-                  tl.cex = 0.7, cl.cex = 0.5,
-                  number.cex = 0.5,
-                  # Combine with significance
-                  p.mat = p.mat, sig.level = 0.01, insig = "blank",
-                  # hide correlation coefficient on the principal diagonal
-                  diag=TRUE, addrect = 3)
-dev.off()
 
