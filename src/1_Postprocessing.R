@@ -213,8 +213,6 @@ fit_csv <- readr::read_csv(
 # check_treedepth(fit,max_depth = max_treedepth)
 
 
-
-
 fit_clean <- fit_csv %>%
   rename(lower = '2.5%', middle = '50%',upper = '97.5%')  %>%
   mutate(name = strsplit(var, "\\[|\\]|,") %>% map_chr(~.x[1]),
@@ -296,13 +294,7 @@ odem_stan$nse = nse
 save(odem_stan, file = paste0(lake.id,'_mineral.Rda'))
 
 
-
-
-
-
-fair_cols <- c("#38170B","#BF1B0B", "#FFC465", "#66ADE5", "#252A52")
-
-
+# fair_cols <- c("#38170B","#BF1B0B", "#FFC465", "#66ADE5", "#252A52")
 
 df.estimations[[match(lake.id, lake.list)]] <-ParamIndex
 
@@ -317,196 +309,42 @@ list.rhat[[match(lake.id, lake.list)]] = unique(fit_clean$name[which(fit_clean$R
 setwd('../')
 }
 
+# brute-force loading of output (as loop)
+fit.data = list()
+for (lake.id in lake.list){
+  load(paste0(lake.id,'/',lake.id,'_mineral.Rda'))
+  mindata = min(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
+  maxdata = max(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
+  odem_stan_filt = odem_stan[mindata:maxdata,]
+  find.lake <- match(lake.id, lake.list)
+  estimat.lake <- df.estimations[[find.lake]]
+  estimat.lake <- estimat.lake[mindata:maxdata]
+  pos.lake <- which(duplicated(estimat.lake)== FALSE)
+  
+  lake.odem = odem_stan_filt
+  lake.odem[,c('SED','MIN','NEP')] = NA
 
-# brute-force loading of output
+  lake.odem$SED[pos.lake] <- odem_stan$SED[min(estimat.lake):max(estimat.lake)]
+  lake.odem$MIN[pos.lake] <- odem_stan$MIN[min(estimat.lake):max(estimat.lake)]
+  lake.odem$NEP[pos.lake] <- odem_stan$NEP[min(estimat.lake):max(estimat.lake)]
+  # New columns
+  lake.odem[,c('NEP_max','NEP_min','SED_max','SED_min','MIN_max','MIN_min')] = NA
+  lake.odem$NEP_max[pos.lake] <- odem_stan$NEP_mgm3d_upper[min(estimat.lake):max(estimat.lake)]
+  lake.odem$NEP_min[pos.lake] <- odem_stan$NEP_mgm3d_lower[min(estimat.lake):max(estimat.lake)]
+  lake.odem$SED_max[pos.lake] <- odem_stan$SED_mgm2d_upper[min(estimat.lake):max(estimat.lake)]
+  lake.odem$SED_min[pos.lake] <- odem_stan$SED_mgm2d_lower[min(estimat.lake):max(estimat.lake)]
+  lake.odem$MIN_max[pos.lake] <- odem_stan$MIN_mgm3d_upper[min(estimat.lake):max(estimat.lake)]
+  lake.odem$MIN_min[pos.lake] <- odem_stan$MIN_mgm3d_lower[min(estimat.lake):max(estimat.lake)]
+  assign(tolower(lake.id), lake.odem)
+  write_csv(x = lake.odem, file = paste0('Processed_Output/',tolower(lake.id),'_fluxes.csv'),col_names = T)
+  
+  # export fit data to list
+  fit.data[[lake.id]]  = data.frame(obsdata = lake.odem$DO_obs_epi, moddata = lake.odem$DO_epi, iddata = lake.id, type = 'Epilimnion') %>% 
+    bind_rows(data.frame(obsdata = lake.odem$DO_obs_hyp, moddata = lake.odem$DO_hyp, iddata = lake.id, type = 'Hypolimnion')) %>% 
+    na.omit()
+}
+fitdata = bind_rows(fit.data)
 
-load('Allequash/Allequash_mineral.Rda')
-mindata = min(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
-maxdata = max(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
-odem_stan_filt = odem_stan[mindata:maxdata,]
-allequash <- odem_stan_filt
-find.lake <- match('Allequash', lake.list)
-estimat.lake <- df.estimations[[find.lake]]
-estimat.lake <- estimat.lake[mindata:maxdata]
-pos.lake <- which(duplicated(estimat.lake)== FALSE)
-allequash$SED <- NA
-allequash$SED[pos.lake] <- odem_stan$SED[min(estimat.lake):max(estimat.lake)]
-allequash$MIN <- NA
-allequash$MIN[pos.lake] <- odem_stan$MIN[min(estimat.lake):max(estimat.lake)]
-allequash$NEP <- NA
-allequash$NEP[pos.lake] <- odem_stan$NEP[min(estimat.lake):max(estimat.lake)]
-write_csv(x = allequash, file = 'Processed_Output/allequash_fluxes.csv',col_names = T)
-
-load('BigMuskellunge/BigMuskellunge_mineral.Rda')
-mindata = min(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
-maxdata = max(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
-odem_stan_filt = odem_stan[mindata:maxdata,]
-bigmuskellunge <- odem_stan_filt
-find.lake <- match('BigMuskellunge', lake.list)
-estimat.lake <- df.estimations[[find.lake]]
-estimat.lake <- estimat.lake[mindata:maxdata]
-pos.lake <- which(duplicated(estimat.lake)== FALSE)
-bigmuskellunge$SED <- NA
-bigmuskellunge$SED[pos.lake] <- odem_stan$SED[min(estimat.lake):max(estimat.lake)]
-bigmuskellunge$MIN <- NA
-bigmuskellunge$MIN[pos.lake] <- odem_stan$MIN[min(estimat.lake):max(estimat.lake)]
-bigmuskellunge$NEP <- NA
-bigmuskellunge$NEP[pos.lake] <- odem_stan$NEP[min(estimat.lake):max(estimat.lake)]
-
-load('Crystal/Crystal_mineral.Rda')
-mindata = min(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
-maxdata = max(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
-odem_stan_filt = odem_stan[mindata:maxdata,]
-crystal <- odem_stan_filt
-find.lake <- match('Crystal', lake.list)
-estimat.lake <- df.estimations[[find.lake]]
-estimat.lake <- estimat.lake[mindata:maxdata]
-pos.lake <- which(duplicated(estimat.lake)== FALSE)
-crystal$SED <- NA
-crystal$SED[pos.lake] <- odem_stan$SED[min(estimat.lake):max(estimat.lake)]
-crystal$MIN <- NA
-crystal$MIN[pos.lake] <- odem_stan$MIN[min(estimat.lake):max(estimat.lake)]
-crystal$NEP <- NA
-crystal$NEP[pos.lake] <- odem_stan$NEP[min(estimat.lake):max(estimat.lake)]
-
-load('Fish/Fish_mineral.Rda')
-mindata = min(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
-maxdata = max(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
-odem_stan_filt = odem_stan[mindata:maxdata,]
-fish <- odem_stan_filt
-find.lake <- match('Fish', lake.list)
-estimat.lake <- df.estimations[[find.lake]]
-estimat.lake <- estimat.lake[mindata:maxdata]
-pos.lake <- which(duplicated(estimat.lake)== FALSE)
-fish$SED <- NA
-fish$SED[pos.lake] <- odem_stan$SED[min(estimat.lake):max(estimat.lake)]
-fish$MIN <- NA
-fish$MIN[pos.lake] <- odem_stan$MIN[min(estimat.lake):max(estimat.lake)]
-fish$NEP <- NA
-fish$NEP[pos.lake] <- odem_stan$NEP[min(estimat.lake):max(estimat.lake)]
-
-
-load('Mendota/Mendota_mineral.Rda')
-mindata = min(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
-maxdata = max(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
-odem_stan_filt = odem_stan[mindata:maxdata,]
-mendota = odem_stan_filt
-find.lake <- match('Mendota', lake.list)
-estimat.lake <- df.estimations[[find.lake]]
-estimat.lake <- estimat.lake[mindata:maxdata]
-pos.lake <- which(duplicated(estimat.lake)== FALSE)
-mendota$SED <- NA
-mendota$SED[pos.lake] <- odem_stan$SED[min(estimat.lake):max(estimat.lake)]
-mendota$MIN <- NA
-mendota$MIN[pos.lake] <- odem_stan$MIN[min(estimat.lake):max(estimat.lake)]
-mendota$NEP <- NA
-mendota$NEP[pos.lake] <- odem_stan$NEP[min(estimat.lake):max(estimat.lake)]
-mendota$NEP_max <- NA
-mendota$NEP_max[pos.lake] <- odem_stan$NEP_mgm3d_upper[min(estimat.lake):max(estimat.lake)]
-mendota$NEP_min <- NA
-mendota$NEP_min[pos.lake] <- odem_stan$NEP_mgm3d_lower[min(estimat.lake):max(estimat.lake)]
-mendota$SED_max <- NA
-mendota$SED_max[pos.lake] <- odem_stan$SED_mgm2d_upper[min(estimat.lake):max(estimat.lake)]
-mendota$SED_min <- NA
-mendota$SED_min[pos.lake] <- odem_stan$SED_mgm2d_lower[min(estimat.lake):max(estimat.lake)]
-mendota$MIN_max <- NA
-mendota$MIN_max[pos.lake] <- odem_stan$MIN_mgm3d_upper[min(estimat.lake):max(estimat.lake)]
-mendota$MIN_min <- NA
-mendota$MIN_min[pos.lake] <- odem_stan$MIN_mgm3d_lower[min(estimat.lake):max(estimat.lake)]
-
-
-
-load('Monona/Monona_mineral.Rda')
-mindata = min(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
-maxdata = max(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
-odem_stan_filt = odem_stan[mindata:maxdata,]
-monona <- odem_stan_filt
-find.lake <- match('Monona', lake.list)
-estimat.lake <- df.estimations[[find.lake]]
-estimat.lake <- estimat.lake[mindata:maxdata]
-pos.lake <- which(duplicated(estimat.lake)== FALSE)
-monona$SED <- NA
-monona$SED[pos.lake] <- odem_stan$SED[min(estimat.lake):max(estimat.lake)]
-monona$MIN <- NA
-monona$MIN[pos.lake] <- odem_stan$MIN[min(estimat.lake):max(estimat.lake)]
-monona$NEP <- NA
-monona$NEP[pos.lake] <- odem_stan$NEP[min(estimat.lake):max(estimat.lake)]
-
-load('Sparkling/Sparkling_mineral.Rda')
-mindata = min(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
-maxdata = max(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
-odem_stan_filt = odem_stan[mindata:maxdata,]
-sparkling <- odem_stan_filt
-find.lake <- match('Sparkling', lake.list)
-estimat.lake <- df.estimations[[find.lake]]
-estimat.lake <- estimat.lake[mindata:maxdata]
-pos.lake <- which(duplicated(estimat.lake)== FALSE)
-sparkling$SED <- NA
-sparkling$SED[pos.lake] <- odem_stan$SED[min(estimat.lake):max(estimat.lake)]
-sparkling$MIN <- NA
-sparkling$MIN[pos.lake] <- odem_stan$MIN[min(estimat.lake):max(estimat.lake)]
-sparkling$NEP <- NA
-sparkling$NEP[pos.lake] <- odem_stan$NEP[min(estimat.lake):max(estimat.lake)]
-
-load('Trout/Trout_mineral.Rda')
-mindata = min(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
-maxdata = max(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
-odem_stan_filt = odem_stan[mindata:maxdata,]
-trout <- odem_stan_filt
-find.lake <- match('Trout', lake.list)
-estimat.lake <- df.estimations[[find.lake]]
-estimat.lake <- estimat.lake[mindata:maxdata]
-pos.lake <- which(duplicated(estimat.lake)== FALSE)
-trout$SED <- NA
-trout$SED[pos.lake] <- odem_stan$SED[min(estimat.lake):max(estimat.lake)]
-trout$MIN <- NA
-trout$MIN[pos.lake] <- odem_stan$MIN[min(estimat.lake):max(estimat.lake)]
-trout$NEP <- NA
-trout$NEP[pos.lake] <- odem_stan$NEP[min(estimat.lake):max(estimat.lake)]
-
-write_csv(x = allequash, file = 'Processed_Output/allequash_fluxes.csv',col_names = T)
-write_csv(x = bigmuskellunge, file = 'Processed_Output/bigmuskellunge_fluxes.csv',col_names = T)
-write_csv(x = crystal, file = 'Processed_Output/crystal_fluxes.csv',col_names = T)
-write_csv(x = fish, file = 'Processed_Output/fish_fluxes.csv',col_names = T)
-write_csv(x = mendota, file = 'Processed_Output/mendota_fluxes.csv',col_names = T)
-write_csv(x = monona, file = 'Processed_Output/monona_fluxes.csv',col_names = T)
-write_csv(x = trout, file = 'Processed_Output/trout_fluxes.csv',col_names = T)
-write_csv(x = sparkling, file = 'Processed_Output/sparkling_fluxes.csv',col_names = T)
-
-fitdata = data.frame(obsdata <- as.numeric(c(allequash$DO_obs_epi[which(!is.na(allequash$DO_obs_epi))], allequash$DO_obs_hyp[which(!is.na(allequash$DO_obs_hyp))],
-                                             bigmuskellunge$DO_obs_epi[which(!is.na(bigmuskellunge$DO_obs_epi))], bigmuskellunge$DO_obs_hyp[which(!is.na(bigmuskellunge$DO_obs_hyp))],
-                                             crystal$DO_obs_epi[which(!is.na(crystal$DO_obs_epi))], crystal$DO_obs_hyp[which(!is.na(crystal$DO_obs_hyp))],
-                                             fish$DO_obs_epi[which(!is.na(fish$DO_obs_epi))], fish$DO_obs_hyp[which(!is.na(fish$DO_obs_hyp))],
-                                             mendota$DO_obs_epi[which(!is.na(mendota$DO_obs_epi))], mendota$DO_obs_hyp[which(!is.na(mendota$DO_obs_hyp))],
-                                             monona$DO_obs_epi[which(!is.na(monona$DO_obs_epi))], monona$DO_obs_hyp[which(!is.na(monona$DO_obs_hyp))],
-                                             sparkling$DO_obs_epi[which(!is.na(sparkling$DO_obs_epi))], sparkling$DO_obs_hyp[which(!is.na(sparkling$DO_obs_hyp))],
-                                             trout$DO_obs_epi[which(!is.na(trout$DO_obs_epi))], trout$DO_obs_hyp[which(!is.na(trout$DO_obs_hyp))])),
-                     moddata <- as.numeric(c(allequash$DO_epi[which(!is.na(allequash$DO_obs_epi))], allequash$DO_hyp[which(!is.na(allequash$DO_obs_hyp))],
-                                             bigmuskellunge$DO_epi[which(!is.na(bigmuskellunge$DO_obs_epi))], bigmuskellunge$DO_hyp[which(!is.na(bigmuskellunge$DO_obs_hyp))],
-                                             crystal$DO_epi[which(!is.na(crystal$DO_obs_epi))], crystal$DO_hyp[which(!is.na(crystal$DO_obs_hyp))],
-                                             fish$DO_epi[which(!is.na(fish$DO_obs_epi))], fish$DO_hyp[which(!is.na(fish$DO_obs_hyp))],
-                                             mendota$DO_epi[which(!is.na(mendota$DO_obs_epi))], mendota$DO_hyp[which(!is.na(mendota$DO_obs_hyp))],
-                                             monona$DO_epi[which(!is.na(monona$DO_obs_epi))], monona$DO_hyp[which(!is.na(monona$DO_obs_hyp))],
-                                             sparkling$DO_epi[which(!is.na(sparkling$DO_obs_epi))], sparkling$DO_hyp[which(!is.na(sparkling$DO_obs_hyp))],
-                                             trout$DO_epi[which(!is.na(trout$DO_obs_epi))], trout$DO_hyp[which(!is.na(trout$DO_obs_hyp))])),
-                     iddata <- c(rep('Allequash',length(c(allequash$DO_epi[which(!is.na(allequash$DO_obs_epi))], allequash$DO_hyp[which(!is.na(allequash$DO_obs_hyp))]))),
-                                 rep('BigMuskellunge',length(c(bigmuskellunge$DO_epi[which(!is.na(bigmuskellunge$DO_obs_epi))], bigmuskellunge$DO_hyp[which(!is.na(bigmuskellunge$DO_obs_hyp))]))),
-                                 rep('Crystal',length(c(crystal$DO_epi[which(!is.na(crystal$DO_obs_epi))], crystal$DO_hyp[which(!is.na(crystal$DO_obs_hyp))]))),
-                                 rep('Fish',length(c(fish$DO_epi[which(!is.na(fish$DO_obs_epi))], fish$DO_hyp[which(!is.na(fish$DO_obs_hyp))]))),
-                                 rep('Mendota',length(c(mendota$DO_epi[which(!is.na(mendota$DO_obs_epi))], mendota$DO_hyp[which(!is.na(mendota$DO_obs_hyp))]))),
-                                 rep('Monona',length(c(monona$DO_epi[which(!is.na(monona$DO_obs_epi))], monona$DO_hyp[which(!is.na(monona$DO_obs_hyp))]))),
-                                 rep('Sparkling',length(c(sparkling$DO_epi[which(!is.na(sparkling$DO_obs_epi))], sparkling$DO_hyp[which(!is.na(sparkling$DO_obs_hyp))]))),
-                                 rep('Trout',length(c(trout$DO_epi[which(!is.na(trout$DO_obs_epi))], trout$DO_hyp[which(!is.na(trout$DO_obs_hyp))])))),
-                     type <- c(rep('Epilimnion',length(c(allequash$DO_epi[which(!is.na(allequash$DO_obs_epi))]))),rep('Hypolimnion',length(allequash$DO_hyp[which(!is.na(allequash$DO_obs_hyp))])),
-                               rep('Epilimnion',length(c(bigmuskellunge$DO_epi[which(!is.na(bigmuskellunge$DO_obs_epi))]))),rep('Hypolimnion',length( bigmuskellunge$DO_hyp[which(!is.na(bigmuskellunge$DO_obs_hyp))])),
-                               rep('Epilimnion',length(c(crystal$DO_epi[which(!is.na(crystal$DO_obs_epi))]))),rep('Hypolimnion',length( crystal$DO_hyp[which(!is.na(crystal$DO_obs_hyp))])),
-                               rep('Epilimnion',length(c(fish$DO_epi[which(!is.na(fish$DO_obs_epi))]))),rep('Hypolimnion',length( fish$DO_hyp[which(!is.na(fish$DO_obs_hyp))])),
-                               rep('Epilimnion',length(c(mendota$DO_epi[which(!is.na(mendota$DO_obs_epi))]))),rep('Hypolimnion',length( mendota$DO_hyp[which(!is.na(mendota$DO_obs_hyp))])),
-                               rep('Epilimnion',length(c(monona$DO_epi[which(!is.na(monona$DO_obs_epi))]))),rep('Hypolimnion',length( monona$DO_hyp[which(!is.na(monona$DO_obs_hyp))])),
-                               rep('Epilimnion',length(c(sparkling$DO_epi[which(!is.na(sparkling$DO_obs_epi))]))),rep('Hypolimnion',length( sparkling$DO_hyp[which(!is.na(sparkling$DO_obs_hyp))])),
-                               rep('Epilimnion',length(c(trout$DO_epi[which(!is.na(trout$DO_obs_epi))]))),rep('Hypolimnion',length( trout$DO_hyp[which(!is.na(trout$DO_obs_hyp))])))
-)
-colnames(fitdata) <-c('obsdata', 'simdata', 'id', 'type')
 
 g.fits <- setNames(data.frame(matrix(ncol = 5, nrow = 8)), c('id', 'MAE', 'NSE', 'RMSE', 'R2'))
 g.fits$id = unique(fitdata$id)
@@ -601,7 +439,13 @@ ggsave(file = 'Figures/Fig_3.png', g1, dpi = 300, width =250, height = 250,
        units='mm')
 
 
-a=1
+annual.flux = list()
+cum.flux = list()
+cum.flux_max = list()
+cum.flux_min = list()
+odem.flux = list()
+total.flux= list()
+
 for (lake.id in lake.list){
   
   load(paste0(lake.id,'/',lake.id,'_mineral.Rda'))
@@ -625,73 +469,39 @@ for (lake.id in lake.list){
   
   iStrat = which(Stratified==1)
   iNotStrat = which(Stratified==0)
-  Fatm = rep(NA,dim(odem_stan)[1])
-  Fnep = rep(NA,dim(odem_stan)[1])
-  FentrEpi = rep(NA,dim(odem_stan)[1])
-  FentrHypo = rep(NA,dim(odem_stan)[1])
-  Fmin = rep(NA,dim(odem_stan)[1])
-  Fsed = rep(NA,dim(odem_stan)[1])
-  
-  Fatm_max = rep(NA,dim(odem_stan)[1])
-  Fnep_max = rep(NA,dim(odem_stan)[1])
-  FentrEpi_max = rep(NA,dim(odem_stan)[1])
-  FentrHypo_max = rep(NA,dim(odem_stan)[1])
-  Fmin_max = rep(NA,dim(odem_stan)[1])
-  Fsed_max = rep(NA,dim(odem_stan)[1])
-  
-  Fatm_min = rep(NA,dim(odem_stan)[1])
-  Fnep_min = rep(NA,dim(odem_stan)[1])
-  FentrEpi_min = rep(NA,dim(odem_stan)[1])
-  FentrHypo_min = rep(NA,dim(odem_stan)[1])
-  Fmin_min = rep(NA,dim(odem_stan)[1])
-  Fsed_min = rep(NA,dim(odem_stan)[1])
   
   #####################
   # Convert fluxes to areal (lake area)
   
-  Fatm[iStrat] = odem_stan$Fatm[iStrat]/1000*epiV[iStrat]/LakeArea[iStrat]
-  Fatm[iNotStrat] = odem_stan$Fatm[iNotStrat]/1000*totalV[iNotStrat]/LakeArea[iNotStrat]
-  Fnep[iStrat] = odem_stan$Fnep[iStrat]/1000*epiV[iStrat]/LakeArea[iStrat]
-  Fnep[iNotStrat] = odem_stan$Fnep[iNotStrat]/1000*totalV[iNotStrat]/LakeArea[iNotStrat]
-  FentrEpi[iStrat] = odem_stan$Fentr1[iStrat]/1000*epiV[iStrat]/LakeArea[iStrat]
-  FentrEpi[iNotStrat] = odem_stan$Fentr1[iNotStrat]/1000*totalV[iNotStrat]/LakeArea[iNotStrat]
+  areal.fluxes <- function(name, layerV) {
+    vec = rep(NA,dim(odem_stan)[1])
+    vec[iStrat] = odem_stan[,name][iStrat]/1000*layerV[iStrat]/LakeArea[iStrat] # Stratified
+    vec[iNotStrat] = odem_stan[,name][iNotStrat]/1000*totalV[iNotStrat]/LakeArea[iNotStrat] # Mixed 
+    return(vec)
+  }
   
-  Fmin[iStrat] = odem_stan$Fmineral[iStrat]/1000*hypoV[iStrat]/LakeArea[iStrat]
-  Fmin[iNotStrat] = odem_stan$Fmineral[iNotStrat]/1000*totalV[iNotStrat]/LakeArea[iNotStrat]
-  Fsed[iStrat] = odem_stan$Fsed[iStrat]/1000*hypoV[iStrat]/LakeArea[iStrat]
-  Fsed[iNotStrat] = odem_stan$Fsed[iNotStrat]/1000*totalV[iNotStrat]/LakeArea[iNotStrat]
-  FentrHypo[iStrat] = odem_stan$Fentr2[iStrat]/1000*hypoV[iStrat]/LakeArea[iStrat]
-  FentrHypo[iNotStrat] = odem_stan$Fentr2[iNotStrat]/1000*totalV[iNotStrat]/LakeArea[iNotStrat]
-  
+  Fatm = areal.fluxes('Fatm', epiV)
+  Fnep = areal.fluxes('Fnep', epiV)
+  FentrEpi = areal.fluxes('Fentr1', epiV)
+  Fmin = areal.fluxes('Fmineral', hypoV)
+  Fsed = areal.fluxes('Fsed', hypoV)
+  FentrHypo = areal.fluxes('Fentr2', hypoV)
+
   #max
-  Fatm_max[iStrat] = odem_stan$fatm_upper[iStrat]/1000*epiV[iStrat]/LakeArea[iStrat]
-  Fatm_max[iNotStrat] = odem_stan$fatm_upper[iNotStrat]/1000*totalV[iNotStrat]/LakeArea[iNotStrat]
-  Fnep_max[iStrat] = odem_stan$fnep_upper[iStrat]/1000*epiV[iStrat]/LakeArea[iStrat]
-  Fnep_max[iNotStrat] = odem_stan$fnep_upper[iNotStrat]/1000*totalV[iNotStrat]/LakeArea[iNotStrat]
-  FentrEpi_max[iStrat] = odem_stan$fentr_epi_upper[iStrat]/1000*epiV[iStrat]/LakeArea[iStrat]
-  FentrEpi_max[iNotStrat] = odem_stan$fentr_epi_upper[iNotStrat]/1000*totalV[iNotStrat]/LakeArea[iNotStrat]
-  
-  Fmin_max[iStrat] = odem_stan$fmineral_upper[iStrat]/1000*hypoV[iStrat]/LakeArea[iStrat]
-  Fmin_max[iNotStrat] = odem_stan$fmineral_upper[iNotStrat]/1000*totalV[iNotStrat]/LakeArea[iNotStrat]
-  Fsed_max[iStrat] = odem_stan$fsed2_upper[iStrat]/1000*hypoV[iStrat]/LakeArea[iStrat]
-  Fsed_max[iNotStrat] = odem_stan$fsed2_upper[iNotStrat]/1000*totalV[iNotStrat]/LakeArea[iNotStrat]
-  FentrHypo_max[iStrat] = odem_stan$fentr_hyp_upper[iStrat]/1000*hypoV[iStrat]/LakeArea[iStrat]
-  FentrHypo_max[iNotStrat] = odem_stan$fentr_hyp_upper[iNotStrat]/1000*totalV[iNotStrat]/LakeArea[iNotStrat]
+  Fatm_max = areal.fluxes('fatm_upper', epiV)
+  Fnep_max = areal.fluxes('fnep_upper', epiV)
+  FentrEpi_max = areal.fluxes('fentr_epi_upper', epiV)
+  Fmin_max = areal.fluxes('fmineral_upper', hypoV)
+  Fsed_max = areal.fluxes('fsed2_upper', hypoV)
+  FentrHypo_max = areal.fluxes('fentr_hyp_upper', hypoV)
   
   # min
-  Fatm_min[iStrat] = odem_stan$fatm_lower[iStrat]/1000*epiV[iStrat]/LakeArea[iStrat]
-  Fatm_min[iNotStrat] = odem_stan$fatm_lower[iNotStrat]/1000*totalV[iNotStrat]/LakeArea[iNotStrat]
-  Fnep_min[iStrat] = odem_stan$fnep_lower[iStrat]/1000*epiV[iStrat]/LakeArea[iStrat]
-  Fnep_min[iNotStrat] = odem_stan$fnep_lower[iNotStrat]/1000*totalV[iNotStrat]/LakeArea[iNotStrat]
-  FentrEpi_min[iStrat] = odem_stan$fentr_epi_lower[iStrat]/1000*epiV[iStrat]/LakeArea[iStrat]
-  FentrEpi_min[iNotStrat] = odem_stan$fentr_epi_lower[iNotStrat]/1000*totalV[iNotStrat]/LakeArea[iNotStrat]
-  
-  Fmin_min[iStrat] = odem_stan$fmineral_lower[iStrat]/1000*hypoV[iStrat]/LakeArea[iStrat]
-  Fmin_min[iNotStrat] = odem_stan$fmineral_lower[iNotStrat]/1000*totalV[iNotStrat]/LakeArea[iNotStrat]
-  Fsed_min[iStrat] = odem_stan$fsed2_lower[iStrat]/1000*hypoV[iStrat]/LakeArea[iStrat]
-  Fsed_min[iNotStrat] = odem_stan$fsed2_lower[iNotStrat]/1000*totalV[iNotStrat]/LakeArea[iNotStrat]
-  FentrHypo_min[iStrat] = odem_stan$fentr_hyp_lower[iStrat]/1000*hypoV[iStrat]/LakeArea[iStrat]
-  FentrHypo_min[iNotStrat] = odem_stan$fentr_hyp_lower[iNotStrat]/1000*totalV[iNotStrat]/LakeArea[iNotStrat]
+  Fatm_min = areal.fluxes('fatm_lower', epiV)
+  Fnep_min = areal.fluxes('fnep_lower', epiV)
+  FentrEpi_min = areal.fluxes('fentr_epi_lower', epiV)
+  Fmin_min = areal.fluxes('fmineral_lower', hypoV)
+  Fsed_min = areal.fluxes('fsed2_lower', hypoV)
+  FentrHypo_min = areal.fluxes('fentr_hyp_lower', hypoV)
   
   plot(odem_stan$Fentr2 * odem_stan$volume_hyp+odem_stan$Fentr1 * odem_stan$volume_epi);grid()
   #####################
@@ -699,56 +509,35 @@ for (lake.id in lake.list){
   
   # Calculate the yearly cumulative fluxes
   uYears = unique(Year)
-  yFatm = rep(NA,length(uYears))
-  yFnep = rep(NA,length(uYears))
-  yFentrEpi = rep(NA,length(uYears))
-  yFmin = rep(NA,length(uYears))
-  yFsed = rep(NA,length(uYears))
-  yFentrHypo = rep(NA,length(uYears))
-  yFnepTot = rep(NA,length(uYears))
-
-  yFatm_max = rep(NA,length(uYears))
-  yFnep_max = rep(NA,length(uYears))
-  yFentrEpi_max = rep(NA,length(uYears))
-  yFmin_max = rep(NA,length(uYears))
-  yFsed_max = rep(NA,length(uYears))
-  yFentrHypo_max = rep(NA,length(uYears))
-  yFnepTot_max = rep(NA,length(uYears))
   
-  yFatm_min = rep(NA,length(uYears))
-  yFnep_min = rep(NA,length(uYears))
-  yFentrEpi_min = rep(NA,length(uYears))
-  yFmin_min = rep(NA,length(uYears))
-  yFsed_min = rep(NA,length(uYears))
-  yFentrHypo_min = rep(NA,length(uYears))
-  yFnepTot_min = rep(NA,length(uYears))
-  for (i in 1:length(uYears)){
-    thisYear = uYears[i]
-    iYear = which(Year==thisYear)
-    yFatm[i] = sum(Fatm[iYear])
-    yFnep[i] =  sum(Fnep[iYear])
-    yFentrEpi[i] =  sum(FentrEpi[iYear], na.rm = TRUE)
-    yFmin[i] =  sum(Fmin[iYear])
-    yFsed[i] =  sum(Fsed[iYear])
-    yFentrHypo[i] =  sum(FentrHypo[iYear], na.rm = TRUE)
-    yFnepTot[i] = yFnep[i]+yFmin[i]+yFsed[i]
-    
-    yFatm_max[i] = sum(Fatm_max[iYear])
-    yFnep_max[i] =  sum(Fnep_max[iYear])
-    yFentrEpi_max[i] =  sum(FentrEpi_max[iYear], na.rm = TRUE)
-    yFmin_max[i] =  sum(Fmin_max[iYear])
-    yFsed_max[i] =  sum(Fsed_max[iYear])
-    yFentrHypo_max[i] =  sum(FentrHypo_max[iYear], na.rm = TRUE)
-    yFnepTot_max[i] = yFnep_max[i]+yFmin_max[i]+yFsed_max[i]
-    
-    yFatm_min[i] = sum(Fatm_min[iYear])
-    yFnep_min[i] =  sum(Fnep_min[iYear])
-    yFentrEpi_min[i] =  sum(FentrEpi_min[iYear], na.rm = TRUE)
-    yFmin_min[i] =  sum(Fmin_min[iYear])
-    yFsed_min[i] =  sum(Fsed_min[iYear])
-    yFentrHypo_min[i] =  sum(FentrHypo_min[iYear], na.rm = TRUE)
-    yFnepTot_min[i] = yFnep_min[i]+yFmin_min[i]+yFsed_min[i]
+  annflux <- function(thisYear, vec) { # For individual years sum up fluxes 
+    iYear = which(Year == thisYear)
+    return(sum(vec[iYear], na.rm = T))
   }
+  
+  yFatm = sapply(X = uYears, FUN = annflux, vec = Fatm)
+  yFnep = sapply(X = uYears, FUN = annflux, vec = Fnep)
+  yFentrEpi = sapply(X = uYears, FUN = annflux, vec = FentrEpi)
+  yFmin = sapply(X = uYears, FUN = annflux, vec = Fmin)
+  yFsed = sapply(X = uYears, FUN = annflux, vec = Fsed)
+  yFentrHypo = sapply(X = uYears, FUN = annflux, vec = FentrHypo)
+  yFnepTot = yFnep + yFmin + yFsed
+  
+  yFatm_max = sapply(X = uYears, FUN = annflux, vec = Fatm_max)
+  yFnep_max = sapply(X = uYears, FUN = annflux, vec = Fnep_max)
+  yFentrEpi_max = sapply(X = uYears, FUN = annflux, vec = FentrEpi_max)
+  yFmin_max = sapply(X = uYears, FUN = annflux, vec = Fmin_max)
+  yFsed_max = sapply(X = uYears, FUN = annflux, vec = Fsed_max)
+  yFentrHypo_max = sapply(X = uYears, FUN = annflux, vec = FentrHypo_max)
+  yFnepTot_max = yFnep_max + yFmin_max + yFsed_max
+  
+  yFatm_min = sapply(X = uYears, FUN = annflux, vec = Fatm_min)
+  yFnep_min = sapply(X = uYears, FUN = annflux, vec = Fnep_min)
+  yFentrEpi_min = sapply(X = uYears, FUN = annflux, vec = FentrEpi_min)
+  yFmin_min = sapply(X = uYears, FUN = annflux, vec = Fmin_min)
+  yFsed_min = sapply(X = uYears, FUN = annflux, vec = Fsed_min)
+  yFentrHypo_min = sapply(X = uYears, FUN = annflux, vec = FentrHypo_min)
+  yFnepTot_min = yFnep_min + yFmin_min + yFsed_min
   
   # Subset data by year indices
   iYears = which(Year>=BeginYear & Year<=EndYear) # For all days in all years
@@ -851,7 +640,8 @@ for (lake.id in lake.list){
   print('then FnepTotal is ~ contribution of allocthony to total burial.')
   print('Note that total burial+export is greater than FnepTotal,')
   print('because burial+export also includes allocthony not mineralized.')
-  
+ 
+##**## These are at the beginning of the script. Needed here too?  
   calc_fit <- function(mod_data, obs_data){
     obs <- obs_data #cbind(obs_data[3,], obs_data[4,])
     mod <- mod_data #cbind(input.values$o2_epil[proc.obs[1,]]/1000,
@@ -866,11 +656,8 @@ for (lake.id in lake.list){
     return (1-mean((mod-obs)**2,na.rm = TRUE)/mean((obs-mean(obs, na.rm=TRUE))**2,na.rm = TRUE)) # RMSE
   }
   
-  rmse <- round(calc_fit(mod_data = cbind(odem_stan$DO_epi, odem_stan$DO_hyp), obs_data = cbind(odem_stan$DO_obs_epi, odem_stan$DO_obs_hyp))/1000
-                ,2)
-  
-  nse <- round(calc_nse(mod_data = cbind(odem_stan$DO_epi, odem_stan$DO_hyp), obs_data = cbind(odem_stan$DO_obs_epi, odem_stan$DO_obs_hyp))
-               ,2)
+  rmse <- round(calc_fit(mod_data = cbind(odem_stan$DO_epi, odem_stan$DO_hyp), obs_data = cbind(odem_stan$DO_obs_epi, odem_stan$DO_obs_hyp))/1000,2)
+  nse <- round(calc_nse(mod_data = cbind(odem_stan$DO_epi, odem_stan$DO_hyp), obs_data = cbind(odem_stan$DO_obs_epi, odem_stan$DO_obs_hyp)),2)
   
   
   TDepth = odem_stan$tddepth
@@ -936,95 +723,66 @@ for (lake.id in lake.list){
   legend('topright',col=c('red','red','blue'),lty=c(1,NaN,1),pch=c(NaN,21,NaN),c('Modeled O2','Obs O2','O2sat'))
   
   
+  odem.flux[[lake.id]] = data.frame('year' = as.Date(odem_stan$datetime),
+                                      'Atm' = Fatm,
+                                      'Nep' = Fnep,
+                                      'Min' = Fmin,
+                                      'Sed' = Fsed,
+                                      'FnepTot' = Fnep + Fmin - Fsed,
+                                      'FAll' = Fatm + Fnep + Fmin + Fsed,
+                                      'id' = lake.id)[mindata:maxdata,]
   
-  if (a==1){
-    annual.flux = data.frame('year' = uYears[iYearsOnly],
-                             'Atm' = yFatm[iYearsOnly],
-                             'Nep' = yFnep[iYearsOnly],
-                             'Min' = yFmin[iYearsOnly],
-                             'Sed' = yFsed[iYearsOnly],
-                             'Neptot' = yFnepTot[iYearsOnly],
-                             'EntrEpi' = yFentrEpi[iYearsOnly],
-                             'EntrHyp' = yFentrHypo[iYearsOnly],
-                             'id' = lake.id)
-    cum.flux = data.frame('time' = YearFrac[iYears],
-                          'Atm' = FatmCum,
-                          'Nep' = FnepCum,
-                          'Min' = FminCum,
-                          'Sed' = FsedCum,
-                          'NepTot' = FnepTotCum,
-                          'id' = lake.id)
-    
-    cum.flux_max = data.frame('time' = YearFrac[iYears],
-                          'Atm_max' = FatmCum_max,
-                          'Nep_max' = FnepCum_max,
-                          'Min_max' = FminCum_max,
-                          'Sed_max' = FsedCum_max,
-                          'NepTot_max' = FnepTotCum_max,
-                          'id' = lake.id)
-    
-    cum.flux_min = data.frame('time' = YearFrac[iYears],
-                              'Atm_min' = FatmCum_min,
-                              'Nep_min' = FnepCum_min,
-                              'Min_min' = FminCum_min,
-                              'Sed_min' = FsedCum_min,
-                              'NepTot_min' = FnepTotCum_min,
-                              'id' = lake.id)
-    
-    total.flux = data.frame('Atm' = signif(meanFatmC,3),
-                            'Nep' = signif(meanFnepC,3),
-                            'Min' = signif(meanFminC,3),
-                            'Sed' = signif(meanFsedC,3),
-                            'NepTot' = signif(meanFnepTotC,3),
-                            'fit' = rmse,
-                            'id' = lake.id,
-                            'nse' =nse)
-  } else {
-    annual.flux = rbind(annual.flux, data.frame('year' = uYears[iYearsOnly],
-                                                'Atm' = yFatm[iYearsOnly],
-                                                'Nep' = yFnep[iYearsOnly],
-                                                'Min' = yFmin[iYearsOnly],
-                                                'Sed' = yFsed[iYearsOnly],
-                                                'Neptot' = yFnepTot[iYearsOnly],
-                                                'EntrEpi' = yFentrEpi[iYearsOnly],
-                                                'EntrHyp' = yFentrHypo[iYearsOnly],
-                                                'id' = lake.id))
-    cum.flux = rbind(cum.flux, data.frame('time' = YearFrac[iYears],
-                                          'Atm' = FatmCum,
-                                          'Nep' = FnepCum,
-                                          'Min' = FminCum,
-                                          'Sed' = FsedCum,
-                                          'NepTot' = FnepTotCum,
-                                          'id' = lake.id))
-    
-    cum.flux_max = rbind(cum.flux_max, data.frame('time' = YearFrac[iYears],
-                                                  'Atm_max' = FatmCum_max,
-                                                  'Nep_max' = FnepCum_max,
-                                                  'Min_max' = FminCum_max,
-                                                  'Sed_max' = FsedCum_max,
-                                                  'NepTot_max' = FnepTotCum_max,
-                                                  'id' = lake.id))
-    
-    cum.flux_min = rbind(cum.flux_min, data.frame('time' = YearFrac[iYears],
-                                                  'Atm_min' = FatmCum_min,
-                                                  'Nep_min' = FnepCum_min,
-                                                  'Min_min' = FminCum_min,
-                                                  'Sed_min' = FsedCum_min,
-                                                  'NepTot_min' = FnepTotCum_min,
-                                                  'id' = lake.id))
-    
-    total.flux = rbind(total.flux, data.frame('Atm' = signif(meanFatmC,3),
-                                              'Nep' = signif(meanFnepC,3),
-                                              'Min' = signif(meanFminC,3),
-                                              'Sed' = signif(meanFsedC,3),
-                                              'NepTot' = signif(meanFnepTotC,3),
-                                              'fit' = rmse,
-                                              'id' = lake.id,
-                                              'nse' = nse))
-  }
-  a=a+1
+  annual.flux[[lake.id]] = data.frame('year' = uYears[iYearsOnly],
+                           'Atm' = yFatm[iYearsOnly],
+                           'Nep' = yFnep[iYearsOnly],
+                           'Min' = yFmin[iYearsOnly],
+                           'Sed' = yFsed[iYearsOnly],
+                           'Neptot' = yFnepTot[iYearsOnly],
+                           'EntrEpi' = yFentrEpi[iYearsOnly],
+                           'EntrHyp' = yFentrHypo[iYearsOnly],
+                           'id' = lake.id)
+  
+  cum.flux[[lake.id]] = data.frame('time' = YearFrac[iYears],
+                        'Atm' = FatmCum,
+                        'Nep' = FnepCum,
+                        'Min' = FminCum,
+                        'Sed' = FsedCum,
+                        'NepTot' = FnepTotCum,
+                        'id' = lake.id)
+  
+  cum.flux_max[[lake.id]] = data.frame('time' = YearFrac[iYears],
+                        'Atm_max' = FatmCum_max,
+                        'Nep_max' = FnepCum_max,
+                        'Min_max' = FminCum_max,
+                        'Sed_max' = FsedCum_max,
+                        'NepTot_max' = FnepTotCum_max,
+                        'id' = lake.id)
+  
+  cum.flux_min[[lake.id]] = data.frame('time' = YearFrac[iYears],
+                            'Atm_min' = FatmCum_min,
+                            'Nep_min' = FnepCum_min,
+                            'Min_min' = FminCum_min,
+                            'Sed_min' = FsedCum_min,
+                            'NepTot_min' = FnepTotCum_min,
+                            'id' = lake.id)
+  
+  total.flux[[lake.id]] = data.frame('Atm' = signif(meanFatmC,3),
+                          'Nep' = signif(meanFnepC,3),
+                          'Min' = signif(meanFminC,3),
+                          'Sed' = signif(meanFsedC,3),
+                          'NepTot' = signif(meanFnepTotC,3),
+                          'fit' = rmse,
+                          'id' = lake.id,
+                          'nse' =nse)
 }
+annual.flux = bind_rows(annual.flux)
+cum.flux = bind_rows(cum.flux)
+cum.flux_max = bind_rows(cum.flux_max)
+cum.flux_min = bind_rows(cum.flux_min)
+odem.flux = bind_rows(odem.flux)
+total.flux= bind_rows(total.flux)
 
+write_csv(odem.flux, 'Processed_Output/odemFluxes.csv')
 
 library(patchwork)
 total.flux$TP = c(15.7, 8.6, 5.6, 22.4, 109.5, 73.5, 7.2, 6.9)#, 40.3)
@@ -1048,8 +806,6 @@ colnames(cum.flux_min) <- c('time', 'Atm', 'NEP,epi', 'NEP,hypo','Sed','Total NE
 cum.flux_min$Sed = cum.flux_min$Sed * (-1)
 m.cum.flux_min =reshape2::melt(cum.flux_min[,-c(1)])
 m.cum.flux_min$time = cum.flux_min$time
-
-
 
 m.cum.flux.extr = m.cum.flux_min
 colnames(m.cum.flux.extr) = c('id', 'variable', 'min', 'time')
