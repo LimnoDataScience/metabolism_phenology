@@ -17,7 +17,7 @@ library(corrplot)
 library(trend)
 library(broom)
 library(purrr)
-
+library(NTLlakeloads)
 
 calc_fit <- function(mod_data, obs_data){
   obs <- obs_data 
@@ -1558,6 +1558,192 @@ do.decompose <- function(df) {
     select(lakeid, year4, .trend)
   return(trend)
 }
+
+source('src/interpFunctions.R')
+
+# Get LTER data (don't change these names, hardcoded at the moment)
+# LTERnutrients = loadLTERnutrients()  %>% 
+#   mutate(TN.sloh = if_else(!is.na(kjdl_n_sloh), kjdl_n_sloh + no3no2_sloh, totnuf_sloh)) %>% 
+#   mutate(TN = dplyr::coalesce(totnuf, TN.sloh*1000)) %>% 
+#   mutate(TP = dplyr::coalesce(totpuf, totpuf_sloh*1000)) 
+
+LTERnutrients = loadLTERnutrients() %>% 
+  mutate(across(everything(), ~replace(., .<0 , NA))) %>% 
+  rename_all( ~ str_replace(., "_sloh", '.sloh')) %>% 
+  rename_all( ~ str_replace(., "_n", '.n')) %>% 
+  rename_at(vars(ph:drsif.sloh), ~ str_c("value_",.)) %>% 
+  rename_at(vars(flagdepth:flagdrsif.sloh), ~ str_c("error_",.)) %>% 
+  rename_all(~str_replace_all(.,"flag","")) %>% 
+  pivot_longer(-(lakeid:event), names_to = c('.value','item'), names_sep = '_') %>% 
+  filter(!is.na(value) & value>= 0) %>% 
+  filter(!str_detect(error,'A|K|L|H') | is.na(error)) %>% 
+  select(-error) %>% 
+  # mutate(row = row_number()) %>%
+  pivot_wider(names_from = item, values_from = value) %>% 
+  # select(-row) %>% 
+  mutate(TN.sloh = if_else(!is.na(kjdl.n.sloh), kjdl.n.sloh + no3no2.sloh, totnuf.sloh)) %>% 
+  mutate(TN = dplyr::coalesce(totnuf, TN.sloh*1000)) %>% 
+  mutate(TP = dplyr::coalesce(totpuf, totpuf.sloh*1000)) %>% 
+  mutate(DOC = if_else(doc >= 10 | doc < 2, NA_real_, doc))
+
+ggplot(LTERnutrients) + 
+  geom_path(aes(x = sampledate, y = drsif)) +
+  facet_wrap(~lakeid, scales = 'free')
+
+LTERsecchi = loadLTERsecchi()
+LTERtemp = loadLTERtemp() # Download all LTER data from EDI
+LTERchl = loadLTERchlorophyll.north()
+
+# LTERions = loadLTERions() # Download all LTER data from EDI
+lakestats = read_csv('Processed_Output/LTERlakes.csv')
+
+lakes = c('AL','SP','CR','BM','TR','MO','ME','FI')
+
+# Hypolimnion
+monthly.TP.hypo = list()
+monthly.TN.hypo = list()
+monthly.DOC.hypo = list()
+monthly.temp.hypo = list()
+
+# Calculate monthly load 
+for (ll in lakes) {
+  df = LTERnutrients %>% 
+    filter(lakeid == ll) %>% 
+    left_join(lakestats, by = c('lakeid' = 'LakeAbr')) %>%
+    filter(depth >= HypoMin & depth <= HypoMax) %>% 
+    group_by(lakeid, sampledate) %>% 
+    summarise(TN = mean(TN, na.rm = T), TP = mean(TP, na.rm = T), DOC = mean(DOC, na.rm = T))
+  
+  tp = monthlyInterpolate.1D(obs = df, var = 'TP')
+  monthly.TP.hypo[[ll]] = decompose.monthly(tp,lakeAbr = ll, var = 'NA')%>% 
+    mutate(lakeid = ll)
+  tn = monthlyInterpolate.1D(obs = df, var = 'TN')
+  monthly.TN.hypo[[ll]] = decompose.monthly(tn,lakeAbr = ll, var = 'NA')%>% 
+    mutate(lakeid = ll)
+  doc = monthlyInterpolate.1D(obs = df, var = 'DOC')
+  monthly.DOC.hypo[[ll]] = decompose.monthly(doc,lakeAbr = ll, var = 'NA')%>% 
+    mutate(lakeid = ll)
+  
+  df.temp = LTERtemp %>% 
+    filter(lakeid == ll) %>% 
+    left_join(lakestats, by = c('lakeid' = 'LakeAbr')) %>%
+    filter(depth >= HypoMin & depth <= HypoMax) %>% 
+    group_by(lakeid, sampledate) %>% 
+    summarise(temp = mean(wtemp, na.rm = T))
+  temp = monthlyInterpolate.1D(obs = df.temp, var = 'temp')
+  monthly.temp.hypo[[ll]] = decompose.monthly(temp,lakeAbr = ll, var = 'NA')%>% 
+    mutate(lakeid = ll)
+}
+
+# Epilimnion
+monthly.TP.epi = list()
+monthly.TN.epi = list()
+monthly.DOC.epi = list()
+monthly.temp.epi = list()
+monthly.secchi = list()
+monthly.chl.epi = list()
+
+for (ll in lakes) {
+  df = LTERnutrients %>% 
+    filter(lakeid == ll) %>% 
+    left_join(lakestats, by = c('lakeid' = 'LakeAbr')) %>%
+    filter(depth <= 4) %>% 
+    group_by(lakeid, sampledate) %>% 
+    summarise(TN = mean(TN, na.rm = T), TP = mean(TP, na.rm = T), DOC = mean(DOC, na.rm = T))
+  
+  tp = monthlyInterpolate.1D(obs = df, var = 'TP')
+  monthly.TP.epi[[ll]] = decompose.monthly(tp,lakeAbr = ll, var = 'NA')%>% 
+    mutate(lakeid = ll)
+  tn = monthlyInterpolate.1D(obs = df, var = 'TN')
+  monthly.TN.epi[[ll]] = decompose.monthly(tn,lakeAbr = ll, var = 'NA')%>% 
+    mutate(lakeid = ll)
+  doc = monthlyInterpolate.1D(obs = df, var = 'DOC')
+  monthly.DOC.epi[[ll]] = decompose.monthly(doc,lakeAbr = ll, var = 'NA')%>% 
+    mutate(lakeid = ll)
+  
+  df.temp = LTERtemp %>% 
+    filter(lakeid == ll) %>% 
+    left_join(lakestats, by = c('lakeid' = 'LakeAbr')) %>%
+    filter(depth <= 4) %>% 
+    group_by(lakeid, sampledate) %>% 
+    summarise(temp = mean(wtemp, na.rm = T))
+  temp = monthlyInterpolate.1D(obs = df.temp, var = 'temp')
+  monthly.temp.epi[[ll]] = decompose.monthly(temp,lakeAbr = ll, var = 'NA')%>% 
+    mutate(lakeid = ll)
+  
+  df.chl = LTERchl %>% 
+    filter(lakeid == ll) %>% 
+    left_join(lakestats, by = c('lakeid' = 'LakeAbr')) %>%
+    filter(depth <= 4) %>% 
+    group_by(lakeid, sampledate) %>% 
+    summarise(chlor = mean(chlor, na.rm = T))
+  if(!ll %in% c('ME','MO','FI')) {
+    chl = monthlyInterpolate.1D(obs = df.chl, var = 'chlor')
+    monthly.chl.epi[[ll]] = decompose.monthly(chl,lakeAbr = ll, var = 'NA')%>% 
+      mutate(lakeid = ll)
+  }
+  
+  df.secchi = LTERsecchi %>% 
+    filter(lakeid == ll) %>% 
+    group_by(lakeid, sampledate) %>% 
+    summarise(secnview = mean(secnview,na.rm = T))
+  secchi = monthlyInterpolate.1D(obs = df.secchi, var = 'secnview')
+  monthly.secchi[[ll]] = decompose.monthly(secchi,lakeAbr = ll, var = 'NA')%>% 
+    mutate(lakeid = ll)
+}
+
+ggplot(bind_rows(monthly.temp.epi)) +
+  geom_path(aes(date,value)) +
+  facet_wrap(~lakeid)
+
+ggplot(bind_rows(monthly.secchi)) +
+  geom_path(aes(date,value)) +
+  facet_wrap(~lakeid)
+
+bind_rows(monthly.DOC.epi) %>% 
+  filter(decompose == 'var.trend') %>% 
+  ggplot() +
+  geom_path(aes(x = date, y = value)) +
+  facet_wrap(~lakeid, scales = 'free')
+
+ntl.TP.epi = bind_rows(monthly.TP.epi) %>% filter(decompose == 'var.trend') %>% select(-decompose) %>% rename(TP.epi = value) %>% 
+  mutate(year = year(date), month = month(date)) %>% select(year, month, lakeid, TP.epi)
+ntl.TN.epi = bind_rows(monthly.TN.epi) %>% filter(decompose == 'var.trend') %>% select(-decompose) %>% rename(TN.epi = value) %>% 
+  mutate(year = year(date), month = month(date)) %>% select(year, month, lakeid, TN.epi)
+ntl.DOC.epi = bind_rows(monthly.DOC.epi) %>% filter(decompose == 'var.trend') %>% select(-decompose) %>% rename(DOC.epi = value) %>% 
+  mutate(year = year(date), month = month(date)) %>% select(year, month, lakeid, DOC.epi)
+ntl.TP.hypo = bind_rows(monthly.TP.hypo) %>% filter(decompose == 'var.trend') %>% select(-decompose) %>% rename(TP.hypo = value) %>% 
+  mutate(year = year(date), month = month(date)) %>% select(year, month, lakeid, TP.hypo)
+ntl.TN.hypo = bind_rows(monthly.TN.hypo) %>% filter(decompose == 'var.trend') %>% select(-decompose) %>% rename(TN.hypo = value) %>% 
+  mutate(year = year(date), month = month(date)) %>% select(year, month, lakeid, TN.hypo)
+ntl.DOC.hypo = bind_rows(monthly.DOC.hypo) %>% filter(decompose == 'var.trend') %>% select(-decompose) %>% rename(DOC.hypo = value) %>% 
+  mutate(year = year(date), month = month(date)) %>% select(year, month, lakeid, DOC.hypo)
+ntl.secchi = bind_rows(monthly.secchi) %>% filter(decompose == 'var.trend') %>% select(-decompose) %>% rename(secchi = value) %>% 
+  mutate(year = year(date), month = month(date)) %>% select(year, month, lakeid, secchi)
+ntl.temp.epi = bind_rows(monthly.temp.epi) %>% filter(decompose == 'var.trend') %>% select(-decompose) %>% rename(temp.epi = value) %>% 
+  mutate(year = year(date), month = month(date)) %>% select(year, month, lakeid, temp.epi)
+ntl.temp.hypo = bind_rows(monthly.temp.hypo) %>% filter(decompose == 'var.trend') %>% select(-decompose) %>% rename(temp.hypo = value) %>% 
+  mutate(year = year(date), month = month(date)) %>% select(year, month, lakeid, temp.hypo)
+ntl.chl.epi = bind_rows(monthly.chl.epi) %>% filter(decompose == 'var.trend') %>% select(-decompose) %>% rename(chlor = value) %>% 
+  mutate(year = year(date), month = month(date)) %>% select(year, month, lakeid, chlor)
+
+
+ntl.monthly = ntl.TP.epi %>% left_join(ntl.TN.epi) %>% left_join(ntl.DOC.epi) %>% 
+  left_join(ntl.TP.hypo) %>% left_join(ntl.TN.hypo) %>% left_join(ntl.DOC.hypo) %>% 
+  left_join(ntl.secchi) %>% left_join(ntl.temp.epi) %>% left_join(ntl.temp.hypo) %>% 
+  left_join(ntl.chl.epi)
+
+write_csv(ntl.monthly, 'Processed_Output/LTERdecomposeNutrients.csv')
+
+ggplot(ntl.monthly) + 
+  geom_path(aes(as.numeric(row.names(ntl.monthly)), y = TP.epi)) +
+  facet_wrap(~lakeid, scales = 'free')
+
+ggplot(LTERnutrients) + 
+  geom_path(aes(sampledate, y = DOC)) +
+  facet_wrap(~lakeid, scales = 'free')
+
+
 
 fluxes = read_csv('Processed_Output/odemFluxes.csv')
 ntl.monthly = read_csv('Processed_Output/LTERdecomposeNutrients.csv')
