@@ -96,5 +96,5 @@ g1 <- g1.north / g1.south +
   plot_annotation(tag_levels = 'A')+
   plot_layout(heights = (c(2, 1))); g1
 
-ggsave(file = 'Figures/Fig_4_test.png', g1, dpi = 700, width = 4, height = 3.5, units='in')
+ggsave(file = 'Figures/Fig_4.png', g1, dpi = 700, width = 4, height = 3.5, units='in')
 
