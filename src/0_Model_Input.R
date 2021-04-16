@@ -13,7 +13,26 @@ library(zoo)
 
 source('functions_driver.R')
 
-
+# Words of caution: This script assumes that in 'Driver_Data/extdata' multiple folders for each 
+# lake site exist that are filled with 
+# i) hypsographic information about the lake (provided by the GLM configuration file, i.e., *.nml)
+# ii) simulated water temperature data on a evenly space time step with an even grid over the
+# vertical axis, i.e., from GLM3 (Read, J.S., Jia, X., Willard, J., Appling, A.P., Zwart, J.A., 
+# Oliver, S.K., Karpatne, A., Hansen, G.J.A., Hanson,655P.C., Watkins, W., Steinbach, M., Kumar, V., 
+# 2019. Process-Guided Deep Learning Predictions of Lake WaterTemperature.  Water Resources Research 
+# 55, 9173–9190.  URL:https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/2019WR024922, 
+# doi:https://doi.org/10.1029/2019WR024922)
+# iii) long-term dissolved oxygen data, i.e., from NTL-LTER (Magnuson,   J.,   Carpenter,   S.,   
+# Stanley,   E.,   2020b.North   Temperate   Lakes   LTER:   Physical   Limnology   of   Primary   
+# Study   Lakes   1981   -   current   ver   27.
+# URL:https://doi.org/10.6073/pasta/c120b223f80c63982457a2e1e76f6038)
+# iv) evenly spaced meteorological data of air temperature and wind speed, i.e., from NLDS-2 (Xia, 
+# Y., Mitchell, K., Ek, M., Sheffield, J., Cosgrove, B., Wood, E., Luo, L., Alonge, C., Wei, H., 
+# Meng, J.,Livneh, B., Lettenmaier, D., Koren, V., Duan, Q., Mo, K., Fan, Y., Mocko, D., 2012. 
+# Continental-scale waterand  energy  flux  analysis  and  validation  for  the  North  American  
+# Land  Data  Assimilation  System  projectphase 2 (NLDAS-2):  1. Intercomparison and application 
+# of model products:  WATER AND ENERGY FLUXANALYSIS.  Journal of Geophysical Research:  Atmospheres 
+# 117, n/a–n/a.  URL:http://doi.wiley.com/72010.1029/2011JD016048, doi:10.1029/2011JD016048.)
 
 lks <- list.dirs(path = '../Driver_Data/extdata/', full.names = TRUE, recursive = F)
 

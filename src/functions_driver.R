@@ -118,7 +118,7 @@ calc_metalimdepth <- function(wtemp){
   dens <- calc_dens(temp)
   
   cbuoy.depth <- rep(NA, length(grd.info$datetime))
-  metalimn.depth <- matrix(c(NA,NA), ncol=length(grd.info$datetime), nrow=2)#rep(NA, length(grd.info$datetime))
+  metalimn.depth <- matrix(c(NA,NA), ncol=length(grd.info$datetime), nrow=2)
   
   condition<- apply(temp, 1, FUN=min,na.rm=TRUE) > 4
   
@@ -185,7 +185,7 @@ calc_epil_hypo_temp<-function(wtemp,td.depth,H){
 }
 
 #'
-#' Calculate water total volume,using the thermocline depth
+#' Calculate water total volume using the thermocline depth
 #'
 #' @param wtemp matrix; Water temperatures (rows correspond to time, cols to depth)
 #' @param td.depth matrix; thermocline depth
@@ -201,7 +201,7 @@ calc_vol_total<-function(H,A){
 }
 
 #'
-#' Calculate water epilimnion and hypolimnine volume,using the thermocline depth
+#' Calculate water epilimnion and hypolimnine volume using the thermocline depth
 #'
 #' @param H vector; the depth info of the lake
 #' @param A vector; the area info of the lake for each depth

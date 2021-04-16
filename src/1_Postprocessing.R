@@ -5,15 +5,9 @@ setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 
 # Load packages
 library(tidyverse)
-library(lubridate)
-# library(ggdark)
-# library(shades)
 library(LakeMetabolizer)
-# library(RColorBrewer)
 library(zoo)
 library(lazyeval)
-# library(rstan)
-# library(trend)
 library(broom)
 library(purrr)
 
@@ -126,17 +120,17 @@ for (i in 2:nParamEstimates){
 
 dummyinput <- list(
   NEP_mu_min = 0,
-  NEP_mu_max = 0.5,#10000,
-  NEP_sigma = 1e-32, #1000,#0.000001,
+  NEP_mu_max = 0.5,
+  NEP_sigma = 1e-32, 
   SED1_mu_min = 0,
-  SED1_mu_max = 1,#1500,
-  SED1_sigma = 1e-32, #5000,
+  SED1_mu_max = 1,
+  SED1_sigma = 1e-32, 
   MIN1_mu_min = 0,
-  MIN1_mu_max = 1,#10000,
-  MIN1_sigma = 1e-32, #1000,#0.000001,
+  MIN1_mu_max = 1,
+  MIN1_sigma = 1e-32, 
   SED2_mu_min = 0,
-  SED2_mu_max = 1,#1500,
-  SED2_sigma = 1e-32, #5000,
+  SED2_mu_max = 1,
+  SED2_sigma = 1e-32, 
   theta0 = 1.08^(in1yr$temperature_total - 20),
   theta1 = 1.08^(in1yr$temperature_epi - 20),
   theta2 = 1.08^(in1yr$temperature_hypo - 20),
@@ -155,10 +149,10 @@ dummyinput <- list(
   wtr_epi = in1yr$temperature_epi,
   wtr_hyp = in1yr$temperature_hypo,
   wtr_tot = in1yr$temperature_total,
-  khalf = 500, # New, was 3000
+  khalf = 500, 
   err_sigma = 0.0003,
   d = nrow(simdata),
-  DO_epi_init = 15 * 1000, #simdata$DO_obs[1],
+  DO_epi_init = 15 * 1000, 
   DO_hyp_init = 15 * 1000,
   DO_tot_init = 15 * 1000,
   stratified = in1yr$strat,
@@ -464,60 +458,7 @@ for (lake.id in lake.list){
   FAllCum_min = FatmCum_min+FnepCum_min+FminCum_min+FsedCum_min
   FnepTotCum_min = FnepCum_min+FminCum_min-FsedCum_min
   
-  #####################
-  # Plots
-  
-  # For plotting, setup year fractions
   YearFrac = Year+(DayOfYear/366)
-  # 
-  # # Plot Fatm and NEP time series
-  # plot(YearFrac[iYears],Fatm[iYears],type='l',
-  #      xlab = 'Year',ylab = 'Flux (g/m2/d)')
-  # abline(h=0,lty=2)
-  # lines(YearFrac[iYears],Fnep[iYears],col='green',)
-  # lText = c("Fatm","epiNEP")
-  # legend('topleft',lText,cex=0.7,lty=c(1,1,1,1,1),lwd=c(1,1,1,1,1),
-  #        col=c('black','green','red','blue','grey'))
-  # 
-  # # Plot Fatm against NEP
-  # plot(Fnep[iYears],-Fatm[iYears],
-  #      xlab = 'Fnep (g/m2/d)',ylab = '(-) Fatm (g/m2/d)')
-  # abline(a=0,b=1,lty=2)
-  # abline(lm(-Fatm[iYears]~Fnep[iYears]), col="red") # regression line (y~x)
-  # 
-  # # Plot yearly total fluxes
-  # maxY = max(c(yFatm,yFnep,yFmin))
-  # myYLim = c(-maxY,maxY)
-  # plot(uYears[iYearsOnly],yFatm[iYearsOnly],type='l',ylim = myYLim,
-  #      xlab = 'Year',ylab = 'Total yearly flux (g/m2/y)')
-  # abline(h=0,lty=2)
-  # lines(uYears[iYearsOnly],yFnep[iYearsOnly],col='green')
-  # lines(uYears[iYearsOnly],yFmin[iYearsOnly],col='red')
-  # lines(uYears[iYearsOnly],yFsed[iYearsOnly],col='blue')
-  # lines(uYears[iYearsOnly],yFnepTot[iYearsOnly],col='grey',lwd=2)
-  # lines(uYears[iYearsOnly],yFentrEpi[iYearsOnly],col='cyan',lwd=2)
-  # lines(uYears[iYearsOnly],yFentrHypo[iYearsOnly],col='violet',lwd=2)
-  # 
-  # lText = c("Fatm","epiNEP","Min","Sed","totNEP",'Entr1','Entr2')
-  # legend('topleft',lText,cex=0.7,lty=c(1,1,1,1,1),lwd=c(1,1,1,1,1),
-  #        col=c('black','green','red','blue','grey','cyan','violet'))
-  # 
-  # # Plot total cumulative fluxes
-  # maxY = max(c(FatmCum,FnepCum,FminCum,FsedCum))
-  # myYLim = c(-maxY,maxY)
-  # plot(YearFrac[iYears],FatmCum,type='l',ylim = myYLim,
-  #      xlab = 'Year',ylab = 'Cumultative flux (g/m2)')
-  # abline(h=0,lty=2)
-  # lines(YearFrac[iYears],FnepCum,col='green')
-  # lines(YearFrac[iYears],FminCum,col='red')
-  # lines(YearFrac[iYears],FsedCum,col='blue')
-  # lines(YearFrac[iYears],FnepTotCum,col='grey',lwd=2)
-  # 
-  # grid(NA, 5, lwd = 1)
-  # 
-  # lText = c("Fatm","epiNEP","Min","Sed","totNEP")
-  # legend('topleft',lText,cex=0.7,lty=c(1,1,1,1,1),lwd=c(1,1,1,1,1),
-  #        col=c('black','green','red','blue','grey'))
   
   # Convert to annual carbon units
   TYears = EndYear-BeginYear+1
@@ -555,28 +496,13 @@ for (lake.id in lake.list){
   o2def = myK * (o2sat - odem_stan$DO_epi) * 1/TDepth / 1000 # convert to mg/L
   
   o2defObs = myK * (o2sat - odem_stan$DO_obs_epi) * 1/TDepth / 1000
-  # plot(YearFrac[iYears], odem_stan$Fatm[iYears]/1000,type='l',ylim=c(-1,1),
-  #      xlab='Day of sim',ylab='Atmospheric flux (mgO2/L/d)',main="")
-  # lines(YearFrac[iYears],o2def[iYears],col='red')
-  # points(YearFrac[iYears],o2defObs[iYears],col='blue')
-  # abline(h=0)
-  # legend('topright',col=c('black','red','blue'),lty=c(1,1,1),c('Modeled Fatm','Fatm, modeled O2 def scaled','Fatm, observed O2 def scaled'))
-  # 
-  # 
-  # Plot observations and fits in model output units
+
   epiMod = odem_stan$DO_epi
   epiObs = odem_stan$DO_obs_epi
   epiObs[!is.na(odem_stan$DO_obs_tot)] = odem_stan$DO_obs_tot[!is.na(odem_stan$DO_obs_tot)]
   hypoMod = odem_stan$DO_hyp
   hypoObs = odem_stan$DO_obs_hyp
   
-  # plot(YearFrac[iYears],epiMod[iYears],type='l',col='red',
-  #      xlab = 'Year fraction',ylab='DO (mg/m3)')
-  # points(YearFrac[iYears],epiObs[iYears],col='red')
-  # lines(YearFrac[iYears],hypoMod[iYears],col='green')
-  # points(YearFrac[iYears],hypoObs[iYears],col='green')
-  # legend('topright',col=c('red','green'),lty=c(1,1,1),c('Epi O2','Hypo O2'))
-  # 
   df.dots <- data.frame('datetime' = date_decimal(YearFrac[iYears]),
                         'simO2' = epiMod[iYears],
                         'satO2' = o2sat[iYears],
@@ -591,22 +517,7 @@ for (lake.id in lake.list){
 
   
   o2defObs = myK * (o2sat - odem_stan$DO_obs_epi) * 1/TDepth / 1000
-  # plot(YearFrac[iYears], odem_stan$Fatm[iYears]/1000,type='l',ylim=c(-1,1),
-  #      xlab='Day of sim',ylab='Atmospheric flux (mgO2/L/d)',main="")
-  # lines(YearFrac[iYears],o2def[iYears],col='red')
-  # points(YearFrac[iYears],o2defObs[iYears],col='blue')
-  # abline(h=0)
-  # legend('topright',col=c('black','red','blue'),lty=c(1,1,1),c('Modeled Fatm','Fatm, modeled O2 def scaled','Fatm, observed O2 def scaled'))
-  # 
-  # 
-  # Plot time series of modeled, observed, and saturated epi DO
-  # plot(YearFrac[iYears],epiMod[iYears],ylim=c(6000,13000),type='l',col='red',
-  #      xlab = 'Year fraction',ylab='DO (mg/m3)')
-  # lines(YearFrac[iYears],o2sat[iYears],type='l',col='blue')
-  # points(YearFrac[iYears],epiObs[iYears],col='red')
-  # legend('topright',col=c('red','red','blue'),lty=c(1,NaN,1),pch=c(NaN,21,NaN),c('Modeled O2','Obs O2','O2sat'))
-  # 
-  
+
   odem.flux[[lake.id]] = data.frame(date = as.Date(odem_stan$datetime),
                                       'Atm' = Fatm,
                                       'Nep' = Fnep,
