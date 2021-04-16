@@ -1,1 +1,5 @@
+.gitignore
 .Rhistory
+.Rproj.user
+metabolism_phenology.Rproj
+.DS_Store
