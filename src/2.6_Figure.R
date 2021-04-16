@@ -51,7 +51,7 @@ p1 = ggplot(flux.nepTot) +
   facet_wrap(~region, nrow = 2) +
   theme_bw(base_size = 8) +
   # ylab('Trend signal of total NEP flux') +
-  ylab(expression("Trend signal total NEP flux [g DO"*~m^{-2}*"]")) +
+  ylab(expression("Trend signal total NEP flux [g DO"*~m^{-2}*~d^{-1}*"]")) +
   # theme(axis.title.x = element_blank(), 
   #       legend.position = 'bottom',
   #       legend.title=element_blank(),
