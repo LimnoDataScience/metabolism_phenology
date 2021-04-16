@@ -1,4 +1,5 @@
 #### Manuscript Figure 4 ####
+library(tidyverse)
 library(patchwork)
 
 # Load data
@@ -12,7 +13,7 @@ cum.flux_min = read_csv('Processed_Output/Fluxes_cumFluxmin.csv')
 # colnames(name.chane.annual.flux) <- c('Year', 'ATM', 'NEP_epi', 'NEP_hypo', 'SED', 'NEP_tot', 'ENTR_epi',
 #                                       'ENTR_hypo', 'ID')
 
-# cum.flux$Sed = cum.flux$Sed * (-1)
+cum.flux$Sed = cum.flux$Sed * (-1)
 m.cum.flux = reshape2::melt(cum.flux[,-c(1)])
 m.cum.flux$time = cum.flux$time
 

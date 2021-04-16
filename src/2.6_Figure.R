@@ -1,11 +1,11 @@
 #### Manuscript Figure 6 ####
-
 # Load graphing libraries
 library(ggdendro)
 library(purrr)
 library(broom)
 library(lubridate)
 library(tidyverse)
+library(corrplot)
 
 #### Flux + Correlation Plot: Manuscript Figure ####
 scale2 <- function(x, na.rm = TRUE) (x - mean(x, na.rm = na.rm)) / sd(x, na.rm)
@@ -31,9 +31,6 @@ do.decompose <- function(df) {
 
 # fluxes = read_csv('/Users/hilarydugan/Dropbox/Paper_Publications/Ladwig (2021) Oxygen ODEM NTL/R/odemFluxes.csv') %>% 
 #   rename(id = name, lake = lakeid)
-ggplot(trend) + 
-  geom_path(aes(x = date, y = .trend, col = id), size = 0.5) +
-  facet_wrap(~id)
 
 fluxes = read_csv('Processed_Output/Fluxes_dailyFluxes.csv')
 flux.nepTot = fluxes %>% 

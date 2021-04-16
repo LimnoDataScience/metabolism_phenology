@@ -3,21 +3,21 @@ rm(list= ls())
 
 setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 
+# Load packages
 library(tidyverse)
 library(lubridate)
-library(ggdark)
-library(shades)
+# library(ggdark)
+# library(shades)
 library(LakeMetabolizer)
-library(RColorBrewer)
+# library(RColorBrewer)
 library(zoo)
 library(lazyeval)
-library(rstan)
-library(LakeMetabolizer)
-library(corrplot)
-library(trend)
+# library(rstan)
+# library(trend)
 library(broom)
 library(purrr)
 
+# Custom Functions 
 calc_fit <- function(mod_data, obs_data){
   obs <- obs_data 
   mod <- mod_data 
@@ -28,18 +28,6 @@ calc_nse <- function(mod_data, obs_data){
   mod <- mod_data 
   return (1-mean((mod-obs)**2,na.rm = TRUE)/mean((obs-mean(obs, na.rm=TRUE))**2,na.rm = TRUE)) # RMSE
 }
-
-interpolate_nearest.neighbor <- function(data){
-  for (i in 1:ncol(data)){
-    idx <- which(!is.na(data[,i]))
-    for (j in seq(1, length(data[,i]))[!(seq(1, length(data[,i])) %in% idx)]){
-      find.min <- which.min((idx-j)^2)
-      data[j,i] = data[idx[find.min], i]
-    }
-  }
-  return(data)
-}
-
 
 lake.list <- c('Allequash', 'BigMuskellunge', 'Crystal', 'Fish', 'Mendota',
                'Monona', 'Sparkling', 'Trout')
@@ -311,7 +299,7 @@ list.rhat[[match(lake.id, lake.list)]] = unique(fit_clean$name[which(fit_clean$R
 setwd('../')
 }
 
-# brute-force loading of output (as loop)
+#### Loading of output (as loop) ####
 fit.data = list()
 for (lake.id in lake.list){
   load(paste0(lake.id,'/',lake.id,'_mineral.Rda'))
@@ -349,7 +337,7 @@ fitdata = bind_rows(fit.data)
 write_csv(fitdata, 'Processed_Output/fitdata.csv')
 
 
-## Compute annual, cumulative, and total fluxes ###
+### Compute annual, cumulative, and total fluxes ####
 annual.flux = list()
 cum.flux = list()
 cum.flux_max = list()
@@ -551,21 +539,6 @@ for (lake.id in lake.list){
   print('then FnepTotal is ~ contribution of allocthony to total burial.')
   print('Note that total burial+export is greater than FnepTotal,')
   print('because burial+export also includes allocthony not mineralized.')
- 
-##**## These are at the beginning of the script. Needed here too?  
-  calc_fit <- function(mod_data, obs_data){
-    obs <- obs_data #cbind(obs_data[3,], obs_data[4,])
-    mod <- mod_data #cbind(input.values$o2_epil[proc.obs[1,]]/1000,
-    #     input.values$o2_hypo[proc.obs[1,]]/1000)
-    return (sqrt(mean((obs-mod)**2,na.rm = TRUE))) # RMSE
-  }
-  
-  calc_nse <- function(mod_data, obs_data){
-    obs <- obs_data #cbind(obs_data[3,], obs_data[4,])
-    mod <- mod_data #cbind(input.values$o2_epil[proc.obs[1,]]/1000,
-    #     input.values$o2_hypo[proc.obs[1,]]/1000)
-    return (1-mean((mod-obs)**2,na.rm = TRUE)/mean((obs-mean(obs, na.rm=TRUE))**2,na.rm = TRUE)) # RMSE
-  }
   
   rmse <- round(calc_fit(mod_data = cbind(odem_stan$DO_epi, odem_stan$DO_hyp), obs_data = cbind(odem_stan$DO_obs_epi, odem_stan$DO_obs_hyp))/1000,2)
   nse <- round(calc_nse(mod_data = cbind(odem_stan$DO_epi, odem_stan$DO_hyp), obs_data = cbind(odem_stan$DO_obs_epi, odem_stan$DO_obs_hyp)),2)
@@ -701,664 +674,57 @@ write_csv(cum.flux_min, 'Processed_Output/Fluxes_cumFluxmin.csv')
 write_csv(cum.flux_max, 'Processed_Output/Fluxes_cumFluxmax.csv')
 write_csv(annual.flux, 'Processed_Output/Fluxes_annualFluxes.csv')
 
+### Decompose time series of nep ####
+decompose.nep <- function(df.nep, name) {
+  # Three decomposed objects: NEP, NEP_max, and NEP_min
+  assign(paste0(name,'.nep'), decompose(ts(df.nep$Fnep - df.nep$Fsed + df.nep$Fmin, frequency = 365)), envir = .GlobalEnv)
+  assign(paste0(name,'.nep_max'), decompose(ts(df.nep$fnep_upper - df.nep$fsed2_upper + df.nep$fmineral_upper, frequency = 365)), envir = .GlobalEnv)
+  assign(paste0(name,'.nep_min'), decompose(ts(df.nep$fnep_lower - df.nep$fsed2_lower + df.nep$fmineral_lower, frequency = 365)), envir = .GlobalEnv)
+}
+decompose.nep(allequash, 'allequash')
+decompose.nep(bigmuskellunge, 'bigmuskellunge')
+decompose.nep(crystal, 'crystal')
+decompose.nep(fish, 'fish')
+decompose.nep(mendota, 'mendota')
+decompose.nep(monona, 'monona')
+decompose.nep(sparkling, 'sparkling')
+decompose.nep(trout, 'trout')
 
+# Create data frame of seasonal patterns 
+seasonal.df = list()
+cum.seasonal.df = list()
+for (lake.id in lake.list) {
+  name = tolower(lake.id)
+  seasonal.df[[lake.id]] = data.frame(id = lake.id, NEP = get(paste0(name,'.nep'))$seasonal[1:366], 
+             NEP_max = get(paste0(name,'.nep_max'))$seasonal[1:366], 
+             NEP_min = get(paste0(name,'.nep_min'))$seasonal[1:366], 
+             time = get(name)$datetime[1:366], volume = get(name)$volume_tot[1:366], area = get(name)$area_epi[1:366]) %>%
+    mutate(yday = yday(time)) %>% 
+    mutate(movavg = rollmean(NEP, k = 7, na.pad = TRUE)) %>% 
+    mutate(movavg_max = rollmean(NEP_max, k = 7, na.pad = TRUE)) %>% 
+    mutate(movavg_min = rollmean(NEP_min, k = 7, na.pad = TRUE)) %>% 
+    mutate(loc = if_else(lake.id %in% c('Fish','Mendota','Monona','Wingra'), 'South', 'North'))
+  
+  day.df = seasonal.df[[lake.id]] %>% arrange(id, yday) # arrange from start of the year
+  cum.seasonal.df[[lake.id]] = seasonal.df[[lake.id]] %>% arrange(id, yday) %>% # arrange from start of the year
+    group_by(id) %>% 
+    mutate(NEP = cumsum(NEP), NEP_max = cumsum(NEP_max), NEP_min = cumsum(NEP_min)) %>% 
+    mutate(movavg = rollmean(NEP, k = 7, na.pad = TRUE)) %>% 
+    mutate(movavg_max = rollmean(NEP_max, k = 7, na.pad = TRUE)) %>% 
+    mutate(movavg_min = rollmean(NEP_min, k = 7, na.pad = TRUE))
+}
 
-
-allequash.nep = ts(allequash$Fnep -allequash$Fsed +allequash$Fmin, frequency = 365)
-allequash.nep = decompose(allequash.nep)
-bigmuskellunge.nep = ts(bigmuskellunge$Fnep- bigmuskellunge$Fsed +bigmuskellunge$Fmin, frequency = 365)
-bigmuskellunge.nep = decompose(bigmuskellunge.nep)
-crystal.nep = ts(crystal$Fnep -crystal$Fsed +crystal$Fmin, frequency = 365)
-crystal.nep = decompose(crystal.nep)
-fish.nep = ts(fish$Fnep-fish$Fsed +fish$Fmin, frequency = 365)
-fish.nep = decompose(fish.nep)
-mendota.nep = ts(mendota$Fnep- mendota$Fsed +mendota$Fmin, frequency = 365)
-mendota.nep = decompose(mendota.nep)
-monona.nep = ts(monona$Fnep -monona$Fsed +monona$Fmin, frequency = 365)
-monona.nep = decompose(monona.nep)
-sparkling.nep = ts(sparkling$Fnep -sparkling$Fsed +sparkling$Fmin, frequency = 365)
-sparkling.nep = decompose(sparkling.nep)
-trout.nep = ts(trout$Fnep - trout$Fsed +trout$Fmin, frequency = 365)
-trout.nep = decompose(trout.nep)
-
-allequash.nep_max = ts(allequash$fnep_upper -allequash$fsed2_upper +allequash$fmineral_upper, frequency = 365)
-allequash.nep_max = decompose(allequash.nep_max)
-bigmuskellunge.nep_max = ts(bigmuskellunge$fnep_upper- bigmuskellunge$fsed2_upper +bigmuskellunge$fmineral_upper, frequency = 365)
-bigmuskellunge.nep_max = decompose(bigmuskellunge.nep_max)
-crystal.nep_max = ts(crystal$fnep_upper -crystal$fsed2_upper +crystal$fmineral_upper, frequency = 365)
-crystal.nep_max = decompose(crystal.nep_max)
-fish.nep_max = ts(fish$fnep_upper-fish$fsed2_upper +fish$fmineral_upper, frequency = 365)
-fish.nep_max = decompose(fish.nep_max)
-mendota.nep_max = ts(mendota$fnep_upper- mendota$fsed2_upper +mendota$fmineral_upper, frequency = 365)
-mendota.nep_max = decompose(mendota.nep_max)
-monona.nep_max = ts(monona$fnep_upper -monona$fsed2_upper +monona$fmineral_upper, frequency = 365)
-monona.nep_max = decompose(monona.nep_max)
-sparkling.nep_max = ts(sparkling$fnep_upper -sparkling$fsed2_upper +sparkling$fmineral_upper, frequency = 365)
-sparkling.nep_max = decompose(sparkling.nep_max)
-trout.nep_max = ts(trout$fnep_upper - trout$fsed2_upper +trout$fmineral_upper, frequency = 365)
-trout.nep_max = decompose(trout.nep_max)
-
-allequash.nep_min = ts(allequash$fnep_lower -allequash$fsed2_lower +allequash$fmineral_lower, frequency = 365)
-allequash.nep_min = decompose(allequash.nep_min)
-bigmuskellunge.nep_min = ts(bigmuskellunge$fnep_lower- bigmuskellunge$fsed2_lower +bigmuskellunge$fmineral_lower, frequency = 365)
-bigmuskellunge.nep_min = decompose(bigmuskellunge.nep_min)
-crystal.nep_min = ts(crystal$fnep_lower -crystal$fsed2_lower +crystal$fmineral_lower, frequency = 365)
-crystal.nep_min = decompose(crystal.nep_min)
-fish.nep_min = ts(fish$fnep_lower-fish$fsed2_lower +fish$fmineral_lower, frequency = 365)
-fish.nep_min = decompose(fish.nep_min)
-mendota.nep_min = ts(mendota$fnep_lower- mendota$fsed2_lower +mendota$fmineral_lower, frequency = 365)
-mendota.nep_min = decompose(mendota.nep_min)
-monona.nep_min = ts(monona$fnep_lower -monona$fsed2_lower +monona$fmineral_lower, frequency = 365)
-monona.nep_min = decompose(monona.nep_min)
-sparkling.nep_min = ts(sparkling$fnep_lower -sparkling$fsed2_lower +sparkling$fmineral_lower, frequency = 365)
-sparkling.nep_min = decompose(sparkling.nep_min)
-trout.nep_min = ts(trout$fnep_lower - trout$fsed2_lower +trout$fmineral_lower, frequency = 365)
-trout.nep_min = decompose(trout.nep_min)
-# wingra.nep = ts(wingra$Fnep + wingra$Fsed +wingra$Fmin, frequency = 365)
-# wingra.nep = decompose(wingra.nep)
-seasonal.df = data.frame('id' = rep(lake.list,each=366), 'NEP' = c(allequash.nep$seasonal[1:366],
-                                                                   bigmuskellunge.nep$seasonal[1:366],crystal.nep$seasonal[1:366],fish.nep$seasonal[1:366],
-                                                                   mendota.nep$seasonal[1:366],monona.nep$seasonal[1:366],sparkling.nep$seasonal[1:366],
-                                                                   trout.nep$seasonal[1:366]),#wingra.nep$seasonal[1:366]),
-                         'NEP_max' = c(allequash.nep_max$seasonal[1:366],
-                                   bigmuskellunge.nep_max$seasonal[1:366],crystal.nep_max$seasonal[1:366],fish.nep_max$seasonal[1:366],
-                                   mendota.nep_max$seasonal[1:366],monona.nep_max$seasonal[1:366],sparkling.nep_max$seasonal[1:366],
-                                   trout.nep_max$seasonal[1:366]),#wingra.nep_max$seasonal[1:366]),
-                         'NEP_min' = c(allequash.nep_min$seasonal[1:366],
-                                   bigmuskellunge.nep_min$seasonal[1:366],crystal.nep_min$seasonal[1:366],fish.nep_min$seasonal[1:366],
-                                   mendota.nep_min$seasonal[1:366],monona.nep_min$seasonal[1:366],sparkling.nep_min$seasonal[1:366],
-                                   trout.nep_min$seasonal[1:366]),#wingra.nep_min$seasonal[1:366]),
-                         'time' = c(yday(allequash$datetime[1:366]),yday(bigmuskellunge$datetime[1:366]),yday(crystal$datetime[1:366]),
-                                    yday(fish$datetime[1:366]),yday(mendota$datetime[1:366]),yday(monona$datetime[1:366]),
-                                    yday(sparkling$datetime[1:366]),yday(trout$datetime[1:366])),#yday(wingra$datetime[1:366])),
-                         'volume' = rep(c(allequash$volume_tot[1],bigmuskellunge$volume_tot[1],crystal$volume_tot[1],
-                                          fish$volume_tot[1],mendota$volume_tot[1],monona$volume_tot[1],
-                                          sparkling$volume_tot[1],trout$volume_tot[1]),each=366),#,wingra$volume_total[1]
-                         'area' = rep(c(allequash$area_epi[1],bigmuskellunge$area_epi[1],crystal$area_epi[1],
-                                        fish$area_epi[1],mendota$area_epi[1],monona$area_epi[1],
-                                        sparkling$area_epi[1],trout$area_epi[1]),each=366),#,wingra$area_surface[1]
-                         'movavg' =c(rollmean(allequash.nep$seasonal[1:366], 7, na.pad=TRUE),
-                                     rollmean(bigmuskellunge.nep$seasonal[1:366], 7, na.pad=TRUE),rollmean(crystal.nep$seasonal[1:366], 7, na.pad=TRUE),rollmean(fish.nep$seasonal[1:366], 7, na.pad=TRUE),
-                                     rollmean(mendota.nep$seasonal[1:366], 7, na.pad=TRUE),rollmean(monona.nep$seasonal[1:366], 7, na.pad=TRUE),rollmean(sparkling.nep$seasonal[1:366], 7, na.pad=TRUE),
-                                     rollmean(trout.nep$seasonal[1:366], 7, na.pad = TRUE)),
-                         'movavg_max' =c(rollmean(allequash.nep_max$seasonal[1:366], 7, na.pad=TRUE),
-                                     rollmean(bigmuskellunge.nep_max$seasonal[1:366], 7, na.pad=TRUE),rollmean(crystal.nep_max$seasonal[1:366], 7, na.pad=TRUE),rollmean(fish.nep_max$seasonal[1:366], 7, na.pad=TRUE),
-                                     rollmean(mendota.nep_max$seasonal[1:366], 7, na.pad=TRUE),rollmean(monona.nep_max$seasonal[1:366], 7, na.pad=TRUE),rollmean(sparkling.nep_max$seasonal[1:366], 7, na.pad=TRUE),
-                                     rollmean(trout.nep_max$seasonal[1:366], 7, na.pad = TRUE)),
-                         'movavg_min' =c(rollmean(allequash.nep_min$seasonal[1:366], 7, na.pad=TRUE),
-                                     rollmean(bigmuskellunge.nep_min$seasonal[1:366], 7, na.pad=TRUE),rollmean(crystal.nep_min$seasonal[1:366], 7, na.pad=TRUE),rollmean(fish.nep_min$seasonal[1:366], 7, na.pad=TRUE),
-                                     rollmean(mendota.nep_min$seasonal[1:366], 7, na.pad=TRUE),rollmean(monona.nep_min$seasonal[1:366], 7, na.pad=TRUE),rollmean(sparkling.nep_min$seasonal[1:366], 7, na.pad=TRUE),
-                                     rollmean(trout.nep_min$seasonal[1:366], 7, na.pad = TRUE))
-                         )#,rollmean(wingra.nep_min$seasonal[1:366], 7, na.pad=TRUE)))#rep(seq(1,366),9))
-seasonal.df$loc = 'North'
-seasonal.df$loc[seasonal.df$id %in% c('Fish','Mendota','Monona','Wingra')] = 'South'
-
-
+seasonal.df = bind_rows(seasonal.df)
 seasonal.df$id <- factor(seasonal.df$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","Fish","Mendota","Monona")))
+
+cum.seasonal.df = bind_rows(cum.seasonal.df)
+cum.seasonal.df$id <- factor(cum.seasonal.df$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","Fish","Mendota","Monona")))
+
 seasonal.df = seasonal.df %>%
-  mutate(var_mean = movavg*volume/area/1000,
+  mutate(var_mean = movavg * volume/area/1000,
          var_max = movavg_max * volume/area/1000,
          var_min = movavg_min * volume/area/1000)
 
-display.brewer.pal(name = 8, name = 'Dark2')
-g1=ggplot(seasonal.df[!is.na(seasonal.df$movavg),], aes(time, (movavg*volume/area/1000), col = id)) +
-  geom_ribbon(aes(x=time, ymin = movavg_min * volume/area/1000, ymax = movavg_max * volume/area/1000, col = id), size = 0.3, alpha = 0.1)+
-  geom_line(aes(linetype=id, col = id), size = 1)+
- # ylab(expression("7-day mov. average of seasonal decomposed total flux rate [g DO"*~m^{-2}*""*~d^{-1}*"]")) +
-  ylab(expression("Filtered seasonal total NEP [g DO"*~m^{-2}*""*~d^{-1}*"]")) +
-  xlab('Day of the year') +
-  scale_color_brewer(palette="Dark2") +
-  scale_linetype_manual(values = c(1,1,1,1,1,2,2,2))+
-  theme_minimal()+
-  geom_hline(yintercept = 0,linetype="dotted", 
-             color = "black", size=1) +
-  theme(legend.text = element_text(size = 20), axis.text.x= element_text(size = 20), plot.title = element_text(size = 20),
-        axis.text.y= element_text(size = 20), text = element_text(size = 15), legend.title = element_blank(), strip.text =element_text(size = 20),
-        legend.position = 'bottom')+
-  guides();g1#linetype = FALSE
-
-
-
-cum.seasonal.df = data.frame('id' = rep(lake.list,each=366), 'NEP' = c(cumsum(allequash.nep$seasonal[1:366][order(yday(allequash$datetime[1:366]))]),
-                                                                       cumsum(bigmuskellunge.nep$seasonal[1:366][order(yday(bigmuskellunge$datetime[1:366]))]),cumsum(crystal.nep$seasonal[1:366][order(yday(crystal$datetime[1:366]))]),
-                                                                       cumsum(fish.nep$seasonal[1:366][order(yday(fish$datetime[1:366]))]),
-                                                                              cumsum(mendota.nep$seasonal[1:366][order(yday(mendota$datetime[1:366]))]),cumsum(monona.nep$seasonal[1:366][order(yday(monona$datetime[1:366]))]),
-                                                                       cumsum(sparkling.nep$seasonal[1:366][order(yday(sparkling$datetime[1:366]))]),
-                                                                   trout.nep$seasonal[1:366][order(yday(trout$datetime[1:366]))]),#wingra.nep$seasonal[1:366]),
-                             'NEP_max' = c(cumsum(allequash.nep_max$seasonal[1:366][order(yday(allequash$datetime[1:366]))]),
-                                       cumsum(bigmuskellunge.nep_max$seasonal[1:366][order(yday(bigmuskellunge$datetime[1:366]))]),cumsum(crystal.nep_max$seasonal[1:366][order(yday(crystal$datetime[1:366]))]),
-                                       cumsum(fish.nep_max$seasonal[1:366][order(yday(fish$datetime[1:366]))]),
-                                       cumsum(mendota.nep_max$seasonal[1:366][order(yday(mendota$datetime[1:366]))]),cumsum(monona.nep_max$seasonal[1:366][order(yday(monona$datetime[1:366]))]),
-                                       cumsum(sparkling.nep_max$seasonal[1:366][order(yday(sparkling$datetime[1:366]))]),
-                                       trout.nep_max$seasonal[1:366][order(yday(trout$datetime[1:366]))]),
-                             'NEP_min' = c(cumsum(allequash.nep_min$seasonal[1:366][order(yday(allequash$datetime[1:366]))]),
-                                           cumsum(bigmuskellunge.nep_min$seasonal[1:366][order(yday(bigmuskellunge$datetime[1:366]))]),cumsum(crystal.nep_min$seasonal[1:366][order(yday(crystal$datetime[1:366]))]),
-                                           cumsum(fish.nep_min$seasonal[1:366][order(yday(fish$datetime[1:366]))]),
-                                           cumsum(mendota.nep_min$seasonal[1:366][order(yday(mendota$datetime[1:366]))]),cumsum(monona.nep_min$seasonal[1:366][order(yday(monona$datetime[1:366]))]),
-                                           cumsum(sparkling.nep_min$seasonal[1:366][order(yday(sparkling$datetime[1:366]))]),
-                                           trout.nep_min$seasonal[1:366][order(yday(trout$datetime[1:366]))]),
-                             
-                         'time' = c(yday(allequash$datetime[1:366][order(yday(allequash$datetime[1:366]))]),
-                                    yday(bigmuskellunge$datetime[1:366][order(yday(bigmuskellunge$datetime[1:366]))]),
-                                    yday(crystal$datetime[1:366][order(yday(crystal$datetime[1:366]))]),
-                                    yday(fish$datetime[1:366][order(yday(fish$datetime[1:366]))])
-                                    ,yday(mendota$datetime[1:366][order(yday(mendota$datetime[1:366]))]),
-                                    yday(monona$datetime[1:366][order(yday(monona$datetime[1:366]))]),
-                                    yday(sparkling$datetime[1:366][order(yday(sparkling$datetime[1:366]))]),
-                                    yday(trout$datetime[1:366][order(yday(trout$datetime[1:366]))])),#yday(wingra$datetime[1:366])),
-                         'volume' = rep(c(allequash$volume_tot[1],bigmuskellunge$volume_tot[1],crystal$volume_tot[1],
-                                          fish$volume_tot[1],mendota$volume_tot[1],monona$volume_tot[1],
-                                          sparkling$volume_tot[1],trout$volume_tot[1]),each=366),#,wingra$volume_total[1]
-                         'area' = rep(c(allequash$area_epi[1],bigmuskellunge$area_epi[1],crystal$area_epi[1],
-                                        fish$area_epi[1],mendota$area_epi[1],monona$area_epi[1],
-                                        sparkling$area_epi[1],trout$area_epi[1]),each=366),#,wingra$area_surface[1]
-                         'movavg' =c(rollmean(cumsum(allequash.nep$seasonal[1:366][order(yday(allequash$datetime[1:366]))]), 7, na.pad=TRUE),
-                                     rollmean(cumsum(bigmuskellunge.nep$seasonal[1:366][order(yday(bigmuskellunge$datetime[1:366]))]), 7, na.pad=TRUE),
-                                     rollmean(cumsum(crystal.nep$seasonal[1:366][order(yday(crystal$datetime[1:366]))]), 7, na.pad=TRUE),
-                                     rollmean(cumsum(fish.nep$seasonal[1:366][order(yday(fish$datetime[1:366]))]), 7, na.pad=TRUE),
-                                     rollmean(cumsum(mendota.nep$seasonal[1:366][order(yday(mendota$datetime[1:366]))]), 7, na.pad=TRUE),
-                                     rollmean(cumsum(monona.nep$seasonal[1:366][order(yday(monona$datetime[1:366]))]), 7, na.pad=TRUE),
-                                     rollmean(cumsum(sparkling.nep$seasonal[1:366][order(yday(sparkling$datetime[1:366]))]), 7, na.pad=TRUE),
-                                     rollmean(cumsum(trout.nep$seasonal[1:366][order(yday(trout$datetime[1:366]))]), 7, na.pad = TRUE)),
-                         'movavg_max' =c(rollmean(cumsum(allequash.nep_max$seasonal[1:366][order(yday(allequash$datetime[1:366]))]), 7, na.pad=TRUE),
-                                     rollmean(cumsum(bigmuskellunge.nep_max$seasonal[1:366][order(yday(bigmuskellunge$datetime[1:366]))]), 7, na.pad=TRUE),
-                                     rollmean(cumsum(crystal.nep_max$seasonal[1:366][order(yday(crystal$datetime[1:366]))]), 7, na.pad=TRUE),
-                                     rollmean(cumsum(fish.nep_max$seasonal[1:366][order(yday(fish$datetime[1:366]))]), 7, na.pad=TRUE),
-                                     rollmean(cumsum(mendota.nep_max$seasonal[1:366][order(yday(mendota$datetime[1:366]))]), 7, na.pad=TRUE),
-                                     rollmean(cumsum(monona.nep_max$seasonal[1:366][order(yday(monona$datetime[1:366]))]), 7, na.pad=TRUE),
-                                     rollmean(cumsum(sparkling.nep_max$seasonal[1:366][order(yday(sparkling$datetime[1:366]))]), 7, na.pad=TRUE),
-                                     rollmean(cumsum(trout.nep_max$seasonal[1:366][order(yday(trout$datetime[1:366]))]), 7, na.pad = TRUE)),
-                         'movavg_min' =c(rollmean(cumsum(allequash.nep_min$seasonal[1:366][order(yday(allequash$datetime[1:366]))]), 7, na.pad=TRUE),
-                                         rollmean(cumsum(bigmuskellunge.nep_min$seasonal[1:366][order(yday(bigmuskellunge$datetime[1:366]))]), 7, na.pad=TRUE),
-                                         rollmean(cumsum(crystal.nep_min$seasonal[1:366][order(yday(crystal$datetime[1:366]))]), 7, na.pad=TRUE),
-                                         rollmean(cumsum(fish.nep_min$seasonal[1:366][order(yday(fish$datetime[1:366]))]), 7, na.pad=TRUE),
-                                         rollmean(cumsum(mendota.nep_min$seasonal[1:366][order(yday(mendota$datetime[1:366]))]), 7, na.pad=TRUE),
-                                         rollmean(cumsum(monona.nep_min$seasonal[1:366][order(yday(monona$datetime[1:366]))]), 7, na.pad=TRUE),
-                                         rollmean(cumsum(sparkling.nep_min$seasonal[1:366][order(yday(sparkling$datetime[1:366]))]), 7, na.pad=TRUE),
-                                         rollmean(cumsum(trout.nep_min$seasonal[1:366][order(yday(trout$datetime[1:366]))]), 7, na.pad = TRUE))
-                         )#,rollmean(wingra.nep_max$seasonal[1:366], 7, na.pad=TRUE)))#rep(seq(1,366),9))
-cum.seasonal.df$loc = 'North'
-cum.seasonal.df$loc[seasonal.df$id %in% c('Fish','Mendota','Monona','Wingra')] = 'South'
-cum.seasonal.df$id <- factor(cum.seasonal.df$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","Fish","Mendota","Monona")))
-
-g2=ggplot(cum.seasonal.df, aes(time, movavg*volume/area/1000, col = id)) +
-  geom_ribbon(aes(x=time, ymin = movavg_min * volume/area/1000, ymax = movavg_max * volume/area/1000, col = id), size = 0.3, alpha = 0.1)+
-  geom_line(aes(linetype=id, col = id), size = 1)+
-  # ylab(expression("7-day mov. average of seasonal decomposed total flux rate [g DO"*~m^{-2}*""*~d^{-1}*"]")) +
-
-  ylab(expression("Filtered cum. sum total NEP [g DO"*~m^{-2}*""*~d^{-1}*"]")) +
-  xlab('Day of the year') +
-  scale_color_brewer(palette="Dark2") +
-  scale_linetype_manual(values = c(1,1,1,1,1,2,2,2))+#scale_linetype_manual(values = c(1,2))+
-  theme_minimal()+
-  geom_hline(yintercept = 0,linetype="dotted", 
-             color = "black", size=1) +
-  theme(legend.text = element_text(size = 20), axis.text.x= element_text(size = 20), plot.title = element_text(size = 20),
-        axis.text.y= element_text(size = 20), text = element_text(size = 15), legend.title = element_blank(), strip.text =element_text(size = 20),
-        legend.position = 'bottom')+
-  guides();g2
-
-
-g3 = g1 / g2   + plot_annotation(tag_levels = 'A') + plot_layout(guides = 'collect') &
-  theme(legend.position='bottom');g3
-ggsave(file = 'Figures/Fig_5.png', g3, dpi = 300, width =300, height = 250,
-       units='mm')
-
-# Clustering
-strat.dur <- c()
-loc = factor(c('north','north','north','south','south','south','north','north','south'))
-a=1
-for (i in lake.list){
-  load(paste0(i,'/',i,'_mineral.Rda'))# load('Allequash/Allequash.Rda')
-  mindata = min(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
-  maxdata = max(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
-  odem_stan = odem_stan[mindata:maxdata,]
-  data <- odem_stan
-  
-  for (an in unique(data$year)){
-    dataAnn = data[ which(data$year %in% an),]
-    dataStrat = dataAnn[which(dataAnn$strat == 1),]
-    that.year.dist <- (max(dataStrat$doy) - min(dataStrat$doy)) 
-    a=a+1
-    strat.dur <- rbind(strat.dur, data.frame('lake' = i, 'dur' = that.year.dist, 'year' = an))
-  }
-}
-
-ggplot(strat.dur, aes(x = lake, y = dur)) +
-  geom_boxplot()
-
-
-anoxDym <- list()
-anoxLab <- c()
-loc = factor(c('north','north','north','south','south','south','north','north','south'))
-a=1
-for (i in lake.list){
-  load(paste0(i,'/',i,'_mineral.Rda'))# load('Allequash/Allequash.Rda')
-  mindata = min(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
-  maxdata = max(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
-  odem_stan = odem_stan[mindata:maxdata,]
-  data <- odem_stan
-  if (loc[which(i %in% lake.list)] == 'north'){
-    elev = 450
-  } else {
-    elev = 300
-  }
-  
-  for (an in unique(data$year)){
-    dataAnn = data[ which(data$year %in% an),]
-    dataStrat = dataAnn[which(dataAnn$strat == 1),]
-    dataStrat$Sat_hypo <- o2.at.sat.base(temp = dataStrat$wtr_hyp, altitude = elev) * 1000
-    dataStrat$dist <- (dataStrat$doy - min(dataStrat$doy)) / (max(dataStrat$doy) - min(dataStrat$doy))
-    dataStrat$normalDO <- dataStrat$DO_hyp / dataStrat$Sat_hypo
-    scaledDOdiff <- approx(dataStrat$dist, dataStrat$normalDO , seq(0,1,0.01))
-    
-    anoxDym[[a]] = scaledDOdiff$y
-    a=a+1
-    anoxLab <- append(anoxLab, paste0(i,'_',an))
-  }
-}
-
-library(dtw)
-anoxDym2 = lapply(anoxDym,rollmean,k = 10)
-
-mydata = (as.matrix(as.data.frame(anoxDym2)))
-wss <- (nrow(mydata)-1)*sum(apply(mydata,2,var))
-for (i in 2:10) wss[i] <- sum(kmeans(mydata,
-                                     centers=i)$withinss)
-plot(1:10, wss, type='b', xlab='Number of Clusters',
-     ylab='Within groups sum of squares')
-distMatrix <- dist(anoxDym2, method= 'euclidean')
-# hc <- hclust(distMatrix, method='average')
-hc <- hclust(distMatrix, method='ward.D')
-plot(hc, main='')
-groups <- cutree(hc, k=5) #k=5) # cut tree into 7 clusters
-# draw dendogram with red borders around the 7 clusters
-rect.hclust(hc, k=5,border='red')#k=7
-indMycl = unique(groups)
-dataGroups = list()
-idz = as.numeric(table(groups))
-for (i in 1:length(indMycl)){
-  idy = which(groups == i)
-  data = anoxDym2[idy]
-  
-  data.df = as.data.frame(do.call(cbind, data)) 
-  dataGroups[[i]] = apply(data.df,1, mean)
-  
-  data.long = data.df %>% 
-    mutate(x = 1:92) %>% 
-    pivot_longer(-x) 
-  
-  # Individual Cluster Plots
-  p1 = ggplot(data.long, aes(x, value, colour=name)) +
-    geom_line() + 
-    theme(legend.position = "none") +
-    labs(title = paste0('Cluster = ',i,' n = ',idz[i]))
-  print(p1)
-}
-
-df = as.data.frame(dataGroups)
-names(df) = c('Anoxic','Convex','Hypoxic','Linear','Concave')
-
-nameVec = names(df)
-df$depth = seq(1,nrow(df))
-table(groups)
-lakeinv <- nameVec[unique(which(table(groups) > 0))]# >5
-
-table(groups)[1]
-
-# Pivot wide for plotting 
-df.long = df %>% 
-  dplyr::select(lakeinv, depth) %>% 
-  pivot_longer(lakeinv) %>% 
-  # mutate(name = fct_relevel(name,'Anoxic','Hypoxic','Linear','Convex','Concave')) 
-  mutate(name = fct_relevel(name,'Concave','Linear','Convex','Hypoxic','Anoxic')) 
-# mutate(name = fct_relevel(name,'Concave','Linear','Convex'))#,'Hypoxic','Anoxic')) 
-
-# Cluster lables 
-cluster.labels = NA
-# order = match(lakeinv, c('Hypoxic','Linear','Convex')) # Order in the same way as 
-order = match(lakeinv, c('Concave','Linear','Convex','Hypoxic','Anoxic')) # Order in the same way as
-for (i in 1:5){
-  j = order[i]
-  cluster.labels[j] = paste0(lakeinv[i],' (n = ',table(groups)[i],')')
-}
-
-# Cluster plotting 
-g.cluster = ggplot(df.long) +
-  geom_line(aes(depth, value, color = name)) +
-  scale_color_manual(values = c('lightblue3','lightblue1','gold','red1','red4'), name = 'Cluster',
-                     labels = cluster.labels) +
-  xlab('Stratification duration [%]') +
-  ylab('Hypo/Sat DO conc. [-]') +
-  theme_minimal(base_size = 8); g.cluster
-
-# Grid Plot
-df.grd <-  setNames(data.frame(matrix(ncol = 1+length(seq(1979, 2018,1)), nrow = 8)), c('lake',
-                                                                                        as.character(seq(1979,2018,1))))
-df.grd$lake <- lake.list
-
-for (i in 1:5) {
-  dff = anoxLab[which(groups == i)]
-  name = lakeinv[i]
-  dmlst <- lake.list[!is.na(match(lake.list, unlist(strsplit(dff, '_'))))]
-  for (j in dmlst){
-    xrow = which(df.grd$lake == j)
-    whpatt = grep(j, dff)
-    whyrs = gsub(".*_","",dff[grep(j, dff)])
-    df.grd[xrow, !is.na(match(colnames(df.grd),whyrs))] <- name
-  }
-}
-
-m.df.grd <- reshape2::melt(df.grd, id.vars = 'lake')
-m.df.grd$lake <- factor(m.df.grd$lake, levels= rev(c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","Fish","Mendota","Monona")))
-g1 <- ggplot(m.df.grd, aes(x = variable, y = lake, fill = as.factor(value))) + 
-  scale_fill_manual(values = c('lightblue3','lightblue1','gold','red1','red4'), name = 'Cluster', 
-                    breaks = c('Concave','Linear','Convex','Hypoxic','Anoxic')) +
-  geom_tile(color = 'black', width = 0.8, height = 0.8, size = 0.5) +
-  labs(x = 'Time', y = '') +
-  theme_minimal(base_size = 8) +
-  theme(axis.text.x = element_text(angle = 45),
-        axis.title.x = element_blank()); g1
-
-g <- g.cluster / g1 + plot_layout(heights = c(1.5,2))  + plot_annotation(tag_levels = 'A');g
-# ggsave('cluster_hd.png', width = 6, height = 4, dpi = 500)
-
-# g <- g.cluster / g1 + plot_annotation(tag_levels = 'A') + plot_layout(heights = c(1.5,2)); g
-# ggsave('cluster_hd.png', width = 6, height = 6, dpi = 500)
-ggsave(file = 'Figures/Fig_7.png', g, dpi = 500, width =6, height = 4)
-
-clust.strat.dur <- c()
-for (ix in (unique(na.omit(m.df.grd$value)))){
-  da.clust <- m.df.grd[which(ix == m.df.grd$value),]
-  for (i in 1:nrow(da.clust)){
-    year.x <- strat.dur[which(da.clust$variable[i] == strat.dur$year),]
-    lake.x <- year.x[which(da.clust$lake[i] == year.x$lake),]
-    clust.strat.dur <- rbind(clust.strat.dur, data.frame('cluster' = ix, 'stratdur' = lake.x$dur))
-  }
-}
-
-ggplot(clust.strat.dur, aes(x = cluster, y = stratdur)) +
-  geom_boxplot()
-
-### example plot
-
-g.conc <- ggplot(subset(mendota, year > 2002 & year < 2006)) + 
-  geom_line(aes(x=datetime, y=o2_epi_middle/1000, col = 'Epilimnion sim.')) +
-  geom_ribbon(aes(x=datetime, ymin=o2_epi_lower/1000, ymax=o2_epi_upper/1000, col = 'Epilimnion sim.'),linetype =2, alpha=0.2) +
-  geom_point(aes(x=datetime, y=DO_obs_epi/1000, col = 'Epilimnion obs.'), size =2) +
-  geom_line(aes(x=datetime, y=o2_hyp_middle/1000, col ='Hypolimnion sim.')) +
-  geom_ribbon(aes(x=datetime, ymin=o2_hyp_lower/1000, ymax=o2_hyp_upper/1000, col = 'Hypolimnion sim.'),linetype =2, alpha=0.2) +
-  geom_point(aes(x=datetime, y=DO_obs_hyp/1000, col= 'Hypolimnion obs.'), size =2) +
-  geom_point(aes(x=datetime, y=DO_obs_tot/1000, col = 'Total obs.'), size=2) +
-  # facet_wrap(~ year) +
-  ylab(expression("Conc. [g DO"*~m^{-3}*"]")) +
-  scale_color_manual(values = c('red1','red4','lightblue3','lightblue1','gold')) +
-  xlab('') +
-  # ggtitle(paste0(lake.id,'_RMSE:',rmse,'_NSE:',nse))+
-  ylim(c(-2,20)) +  theme_minimal()+
-  theme(legend.text = element_text(size = 11), axis.text.x= element_text(size = 20), plot.title = element_text(size = 20),
-        axis.text.y= element_text(size = 20), text = element_text(size = 20), legend.title = element_blank(), strip.text =element_text(size = 20),
-        legend.position = 'bottom');g.conc
-
-g.flux <- ggplot(subset(mendota, year > 2002 & year < 2006)) + 
-  geom_line(aes(x=datetime, y=fnep_middle, col = 'Fnep,epi')) +
-  geom_ribbon(aes(x=datetime, ymin=fnep_lower, ymax=fnep_upper, col = 'Fnep,epi'), linetype =2,alpha=0.2) +
-  geom_line(aes(x=datetime, y=fmineral_middle, col = 'Fnep,hypo')) +
-  geom_ribbon(aes(x=datetime, ymin=fmineral_lower, ymax=fmineral_upper, col = 'Fnep,hypo'), linetype =2, alpha=0.2) +
-  geom_line(aes(x=datetime, y=(-1)*fsed2_middle, col = 'Fsed')) +
-  geom_ribbon(aes(x=datetime, ymin=(-1)*fsed2_lower, ymax=(-1)*fsed2_upper, col = 'Fsed'), linetype =2,alpha=0.2) +
-  # geom_line(aes(x=datetime, y=fatm_middle, col = 'Fatm')) +
-  # geom_ribbon(aes(x=datetime, ymin=fatm_lower, ymax=fatm_upper, col = 'Fatm'), alpha=0.2) +
-  ylab(expression("Sim. fluxes [g DO"*~m^{-3}*~d^{-1}*"]")) +
-  xlab('') +
-  scale_color_manual(values = c("#E69F00", "#56B4E9", "#009E73")) +
-  # ggtitle(paste0(lake.id,'_RMSE:',rmse,'_NSE:',nse))+
-  theme_minimal()+
-  theme(legend.text = element_text(size = 11), axis.text.x= element_text(size = 20), plot.title = element_text(size = 20),
-        axis.text.y= element_text(size = 20), text = element_text(size = 20), legend.title = element_blank(), strip.text =element_text(size = 20),
-        legend.position = 'bottom');g.flux
-
-j.m <- mendota
-j.m$nNEP <- interpolate_nearest.neighbor(data = as.matrix(j.m$NEP, col = 1))
-j.m$nNEP_max <- interpolate_nearest.neighbor(data = as.matrix(j.m$NEP_max, col = 1))
-j.m$nNEP_min <- interpolate_nearest.neighbor(data = as.matrix(j.m$NEP_min, col = 1))
-j.m$nMIN <- interpolate_nearest.neighbor(data = as.matrix(j.m$MIN, col = 1))
-j.m$nSED <- interpolate_nearest.neighbor(data = as.matrix(j.m$SED, col = 1))
-j.m$nMIN_max <- interpolate_nearest.neighbor(data = as.matrix(j.m$MIN_max, col = 1))
-j.m$nMIN_min <- interpolate_nearest.neighbor(data = as.matrix(j.m$MIN_min, col = 1))
-j.m$nSED_max <- interpolate_nearest.neighbor(data = as.matrix(j.m$SED_max, col = 1))
-j.m$nSED_min <- interpolate_nearest.neighbor(data = as.matrix(j.m$SED_min, col = 1))
-g.param <- ggplot(subset(j.m, year > 2002 & year < 2006)) + 
-  geom_line(aes(x=datetime, y=(nNEP), col ='NEP,epi20'),) +
-  geom_ribbon(aes(x=datetime, ymin=nNEP_min, ymax=nNEP_max, col = 'NEP,epi20'), linetype =2,alpha=0.2) +
-  # geom_ribbon(aes(x=datetime, ymin=fnep_lower, ymax=fnep_upper), alpha=0.2) +
-  geom_line(aes(x=datetime, y=(nMIN), col ='NEP,hypo20')) +
-  geom_ribbon(aes(x=datetime, ymin=nMIN_min, ymax=nMIN_max, col = 'NEP,hypo20'), linetype =2,alpha=0.2) +
-  ylab(expression("NEP20 [g DO"*~m^{-3}*~d^{-1}*"]")) +
-  # geom_ribbon(aes(x=datetime, ymin=fmineral_lower, ymax=fmineral_upper), alpha=0.2) +
-  geom_line(aes(x=datetime, y=(-1) * (nSED)/6, col = 'SED20')) +
-  geom_ribbon(aes(x=datetime, ymin=-1 * nSED_min/6, ymax= -1 *nSED_max/6, col = 'SED20'), linetype =2,alpha=0.2) +
-  scale_y_continuous(sec.axis = sec_axis(~.*6, name = 
-                                           expression("SED20 [g DO"*~m^{-2}*~d^{-1}*"]"))       )+
-  xlab('') +
-  scale_color_manual(values = c("#E69F00", "#56B4E9", "#009E73")) +
-  # ggtitle(paste0(lake.id,'_RMSE:',rmse,'_NSE:',nse))+
-  theme_minimal()+
-  theme(legend.text = element_text(size = 11), axis.text.x= element_text(size = 20), plot.title = element_text(size = 20),
-        axis.text.y= element_text(size = 20), text = element_text(size = 20), legend.title = element_blank(), strip.text =element_text(size = 20),
-        legend.position = 'bottom');g.param
-
-g <-g.param /g.flux / g.conc + plot_annotation(tag_levels = 'A'); g
-ggsave(file = paste0('Figures/Fig_2.png'), g, dpi = 300, width =266, height = 300,
-       units='mm')
-
-
-
-
-source('src/interpFunctions.R')
-
-# Get LTER data (don't change these names, hardcoded at the moment)
-# LTERnutrients = loadLTERnutrients()  %>% 
-#   mutate(TN.sloh = if_else(!is.na(kjdl_n_sloh), kjdl_n_sloh + no3no2_sloh, totnuf_sloh)) %>% 
-#   mutate(TN = dplyr::coalesce(totnuf, TN.sloh*1000)) %>% 
-#   mutate(TP = dplyr::coalesce(totpuf, totpuf_sloh*1000)) 
-
-LTERnutrients = loadLTERnutrients() %>% 
-  mutate(across(everything(), ~replace(., .<0 , NA))) %>% 
-  rename_all( ~ str_replace(., "_sloh", '.sloh')) %>% 
-  rename_all( ~ str_replace(., "_n", '.n')) %>% 
-  rename_at(vars(ph:drsif.sloh), ~ str_c("value_",.)) %>% 
-  rename_at(vars(flagdepth:flagdrsif.sloh), ~ str_c("error_",.)) %>% 
-  rename_all(~str_replace_all(.,"flag","")) %>% 
-  pivot_longer(-(lakeid:event), names_to = c('.value','item'), names_sep = '_') %>% 
-  filter(!is.na(value) & value>= 0) %>% 
-  filter(!str_detect(error,'A|K|L|H') | is.na(error)) %>% 
-  select(-error) %>% 
-  # mutate(row = row_number()) %>%
-  pivot_wider(names_from = item, values_from = value) %>% 
-  # select(-row) %>% 
-  mutate(TN.sloh = if_else(!is.na(kjdl.n.sloh), kjdl.n.sloh + no3no2.sloh, totnuf.sloh)) %>% 
-  mutate(TN = dplyr::coalesce(totnuf, TN.sloh*1000)) %>% 
-  mutate(TP = dplyr::coalesce(totpuf, totpuf.sloh*1000)) %>% 
-  mutate(DOC = if_else(doc >= 10 | doc < 2, NA_real_, doc))
-
-ggplot(LTERnutrients) + 
-  geom_path(aes(x = sampledate, y = drsif)) +
-  facet_wrap(~lakeid, scales = 'free')
-
-LTERsecchi = loadLTERsecchi()
-LTERtemp = loadLTERtemp() # Download all LTER data from EDI
-LTERchl = loadLTERchlorophyll.north()
-
-# LTERions = loadLTERions() # Download all LTER data from EDI
-lakestats = read_csv('Processed_Output/LTERlakes.csv')
-
-lakes = c('AL','SP','CR','BM','TR','MO','ME','FI')
-
-# Hypolimnion
-monthly.TP.hypo = list()
-monthly.TN.hypo = list()
-monthly.DOC.hypo = list()
-monthly.temp.hypo = list()
-
-# Calculate monthly load 
-for (ll in lakes) {
-  df = LTERnutrients %>% 
-    filter(lakeid == ll) %>% 
-    left_join(lakestats, by = c('lakeid' = 'LakeAbr')) %>%
-    filter(depth >= HypoMin & depth <= HypoMax) %>% 
-    group_by(lakeid, sampledate) %>% 
-    summarise(TN = mean(TN, na.rm = T), TP = mean(TP, na.rm = T), DOC = mean(DOC, na.rm = T))
-  
-  tp = monthlyInterpolate.1D(obs = df, var = 'TP')
-  monthly.TP.hypo[[ll]] = decompose.monthly(tp,lakeAbr = ll, var = 'NA')%>% 
-    mutate(lakeid = ll)
-  tn = monthlyInterpolate.1D(obs = df, var = 'TN')
-  monthly.TN.hypo[[ll]] = decompose.monthly(tn,lakeAbr = ll, var = 'NA')%>% 
-    mutate(lakeid = ll)
-  doc = monthlyInterpolate.1D(obs = df, var = 'DOC')
-  monthly.DOC.hypo[[ll]] = decompose.monthly(doc,lakeAbr = ll, var = 'NA')%>% 
-    mutate(lakeid = ll)
-  
-  df.temp = LTERtemp %>% 
-    filter(lakeid == ll) %>% 
-    left_join(lakestats, by = c('lakeid' = 'LakeAbr')) %>%
-    filter(depth >= HypoMin & depth <= HypoMax) %>% 
-    group_by(lakeid, sampledate) %>% 
-    summarise(temp = mean(wtemp, na.rm = T))
-  temp = monthlyInterpolate.1D(obs = df.temp, var = 'temp')
-  monthly.temp.hypo[[ll]] = decompose.monthly(temp,lakeAbr = ll, var = 'NA')%>% 
-    mutate(lakeid = ll)
-}
-
-# Epilimnion
-monthly.TP.epi = list()
-monthly.TN.epi = list()
-monthly.DOC.epi = list()
-monthly.temp.epi = list()
-monthly.secchi = list()
-monthly.chl.epi = list()
-
-for (ll in lakes) {
-  df = LTERnutrients %>% 
-    filter(lakeid == ll) %>% 
-    left_join(lakestats, by = c('lakeid' = 'LakeAbr')) %>%
-    filter(depth <= 4) %>% 
-    group_by(lakeid, sampledate) %>% 
-    summarise(TN = mean(TN, na.rm = T), TP = mean(TP, na.rm = T), DOC = mean(DOC, na.rm = T))
-  
-  tp = monthlyInterpolate.1D(obs = df, var = 'TP')
-  monthly.TP.epi[[ll]] = decompose.monthly(tp,lakeAbr = ll, var = 'NA')%>% 
-    mutate(lakeid = ll)
-  tn = monthlyInterpolate.1D(obs = df, var = 'TN')
-  monthly.TN.epi[[ll]] = decompose.monthly(tn,lakeAbr = ll, var = 'NA')%>% 
-    mutate(lakeid = ll)
-  doc = monthlyInterpolate.1D(obs = df, var = 'DOC')
-  monthly.DOC.epi[[ll]] = decompose.monthly(doc,lakeAbr = ll, var = 'NA')%>% 
-    mutate(lakeid = ll)
-  
-  df.temp = LTERtemp %>% 
-    filter(lakeid == ll) %>% 
-    left_join(lakestats, by = c('lakeid' = 'LakeAbr')) %>%
-    filter(depth <= 4) %>% 
-    group_by(lakeid, sampledate) %>% 
-    summarise(temp = mean(wtemp, na.rm = T))
-  temp = monthlyInterpolate.1D(obs = df.temp, var = 'temp')
-  monthly.temp.epi[[ll]] = decompose.monthly(temp,lakeAbr = ll, var = 'NA')%>% 
-    mutate(lakeid = ll)
-  
-  df.chl = LTERchl %>% 
-    filter(lakeid == ll) %>% 
-    left_join(lakestats, by = c('lakeid' = 'LakeAbr')) %>%
-    filter(depth <= 4) %>% 
-    group_by(lakeid, sampledate) %>% 
-    summarise(chlor = mean(chlor, na.rm = T))
-  if(!ll %in% c('ME','MO','FI')) {
-    chl = monthlyInterpolate.1D(obs = df.chl, var = 'chlor')
-    monthly.chl.epi[[ll]] = decompose.monthly(chl,lakeAbr = ll, var = 'NA')%>% 
-      mutate(lakeid = ll)
-  }
-  
-  df.secchi = LTERsecchi %>% 
-    filter(lakeid == ll) %>% 
-    group_by(lakeid, sampledate) %>% 
-    summarise(secnview = mean(secnview,na.rm = T))
-  secchi = monthlyInterpolate.1D(obs = df.secchi, var = 'secnview')
-  monthly.secchi[[ll]] = decompose.monthly(secchi,lakeAbr = ll, var = 'NA')%>% 
-    mutate(lakeid = ll)
-}
-
-ggplot(bind_rows(monthly.temp.epi)) +
-  geom_path(aes(date,value)) +
-  facet_wrap(~lakeid)
-
-ggplot(bind_rows(monthly.secchi)) +
-  geom_path(aes(date,value)) +
-  facet_wrap(~lakeid)
-
-bind_rows(monthly.DOC.epi) %>% 
-  filter(decompose == 'var.trend') %>% 
-  ggplot() +
-  geom_path(aes(x = date, y = value)) +
-  facet_wrap(~lakeid, scales = 'free')
-
-ntl.TP.epi = bind_rows(monthly.TP.epi) %>% filter(decompose == 'var.trend') %>% select(-decompose) %>% rename(TP.epi = value) %>% 
-  mutate(year = year(date), month = month(date)) %>% select(year, month, lakeid, TP.epi)
-ntl.TN.epi = bind_rows(monthly.TN.epi) %>% filter(decompose == 'var.trend') %>% select(-decompose) %>% rename(TN.epi = value) %>% 
-  mutate(year = year(date), month = month(date)) %>% select(year, month, lakeid, TN.epi)
-ntl.DOC.epi = bind_rows(monthly.DOC.epi) %>% filter(decompose == 'var.trend') %>% select(-decompose) %>% rename(DOC.epi = value) %>% 
-  mutate(year = year(date), month = month(date)) %>% select(year, month, lakeid, DOC.epi)
-ntl.TP.hypo = bind_rows(monthly.TP.hypo) %>% filter(decompose == 'var.trend') %>% select(-decompose) %>% rename(TP.hypo = value) %>% 
-  mutate(year = year(date), month = month(date)) %>% select(year, month, lakeid, TP.hypo)
-ntl.TN.hypo = bind_rows(monthly.TN.hypo) %>% filter(decompose == 'var.trend') %>% select(-decompose) %>% rename(TN.hypo = value) %>% 
-  mutate(year = year(date), month = month(date)) %>% select(year, month, lakeid, TN.hypo)
-ntl.DOC.hypo = bind_rows(monthly.DOC.hypo) %>% filter(decompose == 'var.trend') %>% select(-decompose) %>% rename(DOC.hypo = value) %>% 
-  mutate(year = year(date), month = month(date)) %>% select(year, month, lakeid, DOC.hypo)
-ntl.secchi = bind_rows(monthly.secchi) %>% filter(decompose == 'var.trend') %>% select(-decompose) %>% rename(secchi = value) %>% 
-  mutate(year = year(date), month = month(date)) %>% select(year, month, lakeid, secchi)
-ntl.temp.epi = bind_rows(monthly.temp.epi) %>% filter(decompose == 'var.trend') %>% select(-decompose) %>% rename(temp.epi = value) %>% 
-  mutate(year = year(date), month = month(date)) %>% select(year, month, lakeid, temp.epi)
-ntl.temp.hypo = bind_rows(monthly.temp.hypo) %>% filter(decompose == 'var.trend') %>% select(-decompose) %>% rename(temp.hypo = value) %>% 
-  mutate(year = year(date), month = month(date)) %>% select(year, month, lakeid, temp.hypo)
-ntl.chl.epi = bind_rows(monthly.chl.epi) %>% filter(decompose == 'var.trend') %>% select(-decompose) %>% rename(chlor = value) %>% 
-  mutate(year = year(date), month = month(date)) %>% select(year, month, lakeid, chlor)
-
-
-ntl.monthly = ntl.TP.epi %>% left_join(ntl.TN.epi) %>% left_join(ntl.DOC.epi) %>% 
-  left_join(ntl.TP.hypo) %>% left_join(ntl.TN.hypo) %>% left_join(ntl.DOC.hypo) %>% 
-  left_join(ntl.secchi) %>% left_join(ntl.temp.epi) %>% left_join(ntl.temp.hypo) %>% 
-  left_join(ntl.chl.epi)
-
-write_csv(ntl.monthly, 'Processed_Output/LTERdecomposeNutrients.csv')
-
-ggplot(ntl.monthly) + 
-  geom_path(aes(as.numeric(row.names(ntl.monthly)), y = TP.epi)) +
-  facet_wrap(~lakeid, scales = 'free')
-
-ggplot(LTERnutrients) + 
-  geom_path(aes(sampledate, y = DOC)) +
-  facet_wrap(~lakeid, scales = 'free')
-
-
-
-ntl.monthly = read_csv('Processed_Output/LTERdecomposeNutrients.csv')
-
-
-test.df <- ntl.monthly
-test.df = test.df %>%
-  mutate(date = as.yearmon(paste0(year,'-',month))) %>%
-  filter(lakeid %in% c('AL','SP','CR',"BM","TR"))
-idx <- which(test.df$month == 5) 
-ggplot(test.df) +
-  # geom_point(aes(x = date, y = mean.var, col = lakeid), pch = 16, size = 0.3) +
-  geom_path(aes(x = date, y = chlor), size = 0.3) +
-  scale_color_brewer(palette = 'Spectral') +
-  facet_wrap(~lakeid, nrow = 5) +
-  theme_bw(base_size = 8) +
-  ylab('chlorophyll-a') +
-  geom_vline(xintercept=as.numeric(test.df$date[idx]),
-             linetype=4, colour="black") +
-  theme(axis.title.x = element_blank(), 
-        legend.position = 'bottom')
-
+write_csv(seasonal.df, 'Processed_Output/NEP_seasonal.csv')
+write_csv(cum.seasonal.df, 'Processed_Output/NEP_seasonal_cumulative.csv')
 

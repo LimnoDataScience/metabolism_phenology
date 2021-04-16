@@ -1,4 +1,7 @@
 #### Manuscript Figure 3 ####
+library(tidyverse)
+library(patchwork)
+
 fitdata = read_csv('Processed_Output/fitdata.csv')
 
 g.fits <- setNames(data.frame(matrix(ncol = 5, nrow = 8)), c('id', 'MAE', 'NSE', 'RMSE', 'R2'))
