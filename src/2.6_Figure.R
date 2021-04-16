@@ -50,7 +50,8 @@ p1 = ggplot(flux.nepTot) +
   scale_color_brewer(palette = 'Spectral', name = 'Lake') +
   facet_wrap(~region, nrow = 2) +
   theme_bw(base_size = 8) +
-  ylab('Scaled trend signal of total NEP flux') +
+  # ylab('Trend signal of total NEP flux') +
+  ylab(expression("Trend signal total NEP flux [g DO"*~m^{-2}*"]")) +
   # theme(axis.title.x = element_blank(), 
   #       legend.position = 'bottom',
   #       legend.title=element_blank(),
