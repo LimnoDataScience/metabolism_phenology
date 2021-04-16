@@ -1,2 +1,5 @@
+.gitignore
 .Rhistory
-Driver_Data/extdata/
+.Rproj.user
+metabolism_phenology.Rproj
+.DS_Store
