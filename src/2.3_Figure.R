@@ -35,14 +35,16 @@ print(g.fits)
 #   fitdata$NSE[idx] = rep(g.fits$NSE[idy], length(idx))
 #   fitdata$R2[idx] = rep(g.fits$R2[idy], length(idx))
 # }
-# fitdata = fitdata %>% 
-#   arrange(factor(id, levels = (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","","Fish","Mendota","Monona"))))
-# g.fits$id <- factor(g.fits$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","Fish","Mendota","Monona")))
-# fitdata$id <- factor(fitdata$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","","Fish","Mendota","Monona")))
+fitdata = fitdata %>%
+  arrange(factor(id, levels = (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","","Fish","Mendota","Monona"))))
+g.fits$id <- factor(g.fits$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","Fish","Mendota","Monona")))
+fitdata$id <- factor(fitdata$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","","Fish","Mendota","Monona")))
 
+ind <- sample(c(TRUE, FALSE), nrow(fitdata), replace=TRUE, prob=c(0.5, 0.5))
 
-g1 <- ggplot(fitdata, aes(x=obsdata/1000, y=simdata/1000, col = type))+
+g1 <- ggplot(data = fitdata[ind,], aes(x=obsdata/1000, y=simdata/1000, col = type))+
   geom_point(alpha = 0.5) +
+  geom_point(data = fitdata[!ind,], aes(x=obsdata/1000, y=simdata/1000, col = type), alpha = 0.5) +
   ylab(expression("Simulated DO conc. [g DO"*~m^{-3}*"]")) +
   xlab(expression("Observed DO conc. [g DO"*~m^{-3}*"]")) +
   scale_color_manual(values = rep(c('red1','lightblue3'),1)) +

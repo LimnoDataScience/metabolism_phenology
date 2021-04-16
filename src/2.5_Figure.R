@@ -7,6 +7,7 @@ library(patchwork)
 seasonal.df = read_csv('Processed_Output/NEP_seasonal.csv')
 cum.seasonal.df = read_csv('Processed_Output/NEP_seasonal_cumulative.csv')
 
+seasonal.df$id <- factor(seasonal.df$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","Fish","Mendota","Monona")))
 
 g1 = ggplot(seasonal.df[!is.na(seasonal.df$movavg),], 
             aes(as.Date(yday, origin = as.Date('2019-01-01')), (movavg*volume/area/1000), col = id)) +
@@ -26,6 +27,8 @@ g1 = ggplot(seasonal.df[!is.na(seasonal.df$movavg),],
         axis.text.y= element_text(size = 20), text = element_text(size = 15), legend.title = element_blank(), strip.text =element_text(size = 20),
         legend.position = 'bottom')+
   guides(); g1#linetype = FALSE
+
+cum.seasonal.df$id <- factor(cum.seasonal.df$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","Fish","Mendota","Monona")))
 
 g2=ggplot(cum.seasonal.df, aes(as.Date(yday, origin = as.Date('2019-01-01')), movavg*volume/area/1000, col = id)) +
   geom_ribbon(aes(ymin = movavg_min * volume/area/1000, ymax = movavg_max * volume/area/1000, col = id), size = 0.3, alpha = 0.1)+

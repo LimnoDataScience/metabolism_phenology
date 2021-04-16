@@ -64,17 +64,17 @@ j.m$nMIN_min <- interpolate_nearest.neighbor(data = as.matrix(j.m$MIN_min, col =
 j.m$nSED_max <- interpolate_nearest.neighbor(data = as.matrix(j.m$SED_max, col = 1))
 j.m$nSED_min <- interpolate_nearest.neighbor(data = as.matrix(j.m$SED_min, col = 1))
 g.param <- ggplot(subset(j.m, year > 2002 & year < 2006)) + 
-  geom_line(aes(x=datetime, y=(nNEP), col ='NEP,epi20'),) +
-  geom_ribbon(aes(x=datetime, ymin=nNEP_min, ymax=nNEP_max, col = 'NEP,epi20'), linetype =2,alpha=0.2) +
+  geom_line(aes(x=datetime, y=(nNEP), col ='Xnep,epi'),) +
+  geom_ribbon(aes(x=datetime, ymin=nNEP_min, ymax=nNEP_max, col = 'Xnep,epi'), linetype =2,alpha=0.2) +
   # geom_ribbon(aes(x=datetime, ymin=fnep_lower, ymax=fnep_upper), alpha=0.2) +
-  geom_line(aes(x=datetime, y=(nMIN), col ='NEP,hypo20')) +
-  geom_ribbon(aes(x=datetime, ymin=nMIN_min, ymax=nMIN_max, col = 'NEP,hypo20'), linetype =2,alpha=0.2) +
-  ylab(expression("NEP20 [g DO"*~m^{-3}*~d^{-1}*"]")) +
+  geom_line(aes(x=datetime, y=(nMIN), col ='Xnep,hypo')) +
+  geom_ribbon(aes(x=datetime, ymin=nMIN_min, ymax=nMIN_max, col = 'Xnep,hypo'), linetype =2,alpha=0.2) +
+  ylab(expression("Xnep [g DO"*~m^{-3}*~d^{-1}*"]")) +
   # geom_ribbon(aes(x=datetime, ymin=fmineral_lower, ymax=fmineral_upper), alpha=0.2) +
-  geom_line(aes(x=datetime, y=(-1) * (nSED)/6, col = 'SED20')) +
-  geom_ribbon(aes(x=datetime, ymin=-1 * nSED_min/6, ymax= -1 *nSED_max/6, col = 'SED20'), linetype =2,alpha=0.2) +
+  geom_line(aes(x=datetime, y=(-1) * (nSED)/6, col = 'Xsed')) +
+  geom_ribbon(aes(x=datetime, ymin=-1 * nSED_min/6, ymax= -1 *nSED_max/6, col = 'Xsed'), linetype =2,alpha=0.2) +
   scale_y_continuous(sec.axis = sec_axis(~.*6, name = 
-                                           expression("SED20 [g DO"*~m^{-2}*~d^{-1}*"]"))       )+
+                                           expression("Xsed [g DO"*~m^{-2}*~d^{-1}*"]"))       )+
   scale_color_manual(values = c("#E69F00", "#56B4E9", "#009E73")) +
   # ggtitle(paste0(lake.id,'_RMSE:',rmse,'_NSE:',nse))+
   custom.theme; g.param
