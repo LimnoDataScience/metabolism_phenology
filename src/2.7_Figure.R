@@ -128,7 +128,7 @@ g.cluster = ggplot(df.long) +
   scale_color_manual(values = c('lightblue3','lightblue1','gold','red1','red4'), name = 'Cluster',
                      labels = cluster.labels) +
   xlab('Stratification duration [%]') +
-  ylab('Hypolimnion Saturaion \nDO conc. [-]') +
+  ylab('Hypolimnion Saturation \nDO [%]') +
   theme_minimal(base_size = 8) +
   theme(axis.title.y = element_text(vjust = -10)); g.cluster
 
