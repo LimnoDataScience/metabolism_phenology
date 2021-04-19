@@ -586,11 +586,19 @@ write_csv(cum.flux_max, 'Processed_Output/Fluxes_cumFluxmax.csv')
 write_csv(annual.flux, 'Processed_Output/Fluxes_annualFluxes.csv')
 
 ### Decompose time series of nep ####
+# decompose.nep <- function(df.nep, name) {
+#   # Three decomposed objects: NEP, NEP_max, and NEP_min
+#   assign(paste0(name,'.nep'), decompose(ts(df.nep$Fnep - df.nep$Fsed + df.nep$Fmin, frequency = 365)), envir = .GlobalEnv)
+#   assign(paste0(name,'.nep_max'), decompose(ts(df.nep$fnep_upper - df.nep$fsed2_upper + df.nep$fmineral_upper, frequency = 365)), envir = .GlobalEnv)
+#   assign(paste0(name,'.nep_min'), decompose(ts(df.nep$fnep_lower - df.nep$fsed2_lower + df.nep$fmineral_lower, frequency = 365)), envir = .GlobalEnv)
+# }
 decompose.nep <- function(df.nep, name) {
+  volume_epi <- ifelse(df.nep$volume_epi != 0, df.nep$volume_epi, df.nep$volume_tot)
+  volume_hypo <- ifelse(df.nep$volume_hyp != 0, df.nep$volume_hyp, df.nep$volume_tot)
   # Three decomposed objects: NEP, NEP_max, and NEP_min
-  assign(paste0(name,'.nep'), decompose(ts(df.nep$Fnep - df.nep$Fsed + df.nep$Fmin, frequency = 365)), envir = .GlobalEnv)
-  assign(paste0(name,'.nep_max'), decompose(ts(df.nep$fnep_upper - df.nep$fsed2_upper + df.nep$fmineral_upper, frequency = 365)), envir = .GlobalEnv)
-  assign(paste0(name,'.nep_min'), decompose(ts(df.nep$fnep_lower - df.nep$fsed2_lower + df.nep$fmineral_lower, frequency = 365)), envir = .GlobalEnv)
+  assign(paste0(name,'.nep'), decompose(ts((df.nep$Fnep * volume_epi  - df.nep$Fsed * volume_hypo  + df.nep$Fmin * volume_hypo)/df.nep$area_epi/1000, frequency = 365)), envir = .GlobalEnv)
+  assign(paste0(name,'.nep_max'), decompose(ts((df.nep$fnep_upper * volume_epi  - df.nep$fsed2_upper * volume_hypo  + df.nep$fmineral_upper * volume_hypo)/df.nep$area_epi/1000, frequency = 365)), envir = .GlobalEnv)
+  assign(paste0(name,'.nep_min'), decompose(ts((df.nep$fnep_lower * volume_epi  - df.nep$fsed2_lower * volume_hypo  + df.nep$fmineral_lower * volume_hypo)/df.nep$area_epi/1000, frequency = 365)), envir = .GlobalEnv)
 }
 decompose.nep(allequash, 'allequash')
 decompose.nep(bigmuskellunge, 'bigmuskellunge')
@@ -631,10 +639,14 @@ seasonal.df$id <- factor(seasonal.df$id , levels= (c("Allequash","BigMuskellunge
 cum.seasonal.df = bind_rows(cum.seasonal.df)
 cum.seasonal.df$id <- factor(cum.seasonal.df$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","Fish","Mendota","Monona")))
 
+# seasonal.df = seasonal.df %>%
+#   mutate(var_mean = movavg * volume/area/1000,
+#          var_max = movavg_max * volume/area/1000,
+#          var_min = movavg_min * volume/area/1000)
 seasonal.df = seasonal.df %>%
-  mutate(var_mean = movavg * volume/area/1000,
-         var_max = movavg_max * volume/area/1000,
-         var_min = movavg_min * volume/area/1000)
+  mutate(var_mean = movavg/area/1000,
+         var_max = movavg_max/area/1000,
+         var_min = movavg_min/area/1000)
 
 write_csv(seasonal.df, 'Processed_Output/NEP_seasonal.csv')
 write_csv(cum.seasonal.df, 'Processed_Output/NEP_seasonal_cumulative.csv')

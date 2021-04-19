@@ -9,10 +9,11 @@ cum.seasonal.df = read_csv('Processed_Output/NEP_seasonal_cumulative.csv')
 
 seasonal.df$id <- factor(seasonal.df$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","Fish","Mendota","Monona")))
 
+
 g1 = ggplot(seasonal.df[!is.na(seasonal.df$movavg),], 
-            aes(as.Date(yday, origin = as.Date('2019-01-01')), (movavg*volume/area/1000), col = id)) +
-  geom_ribbon(aes(ymin = movavg_min * volume/area/1000, ymax = movavg_max * volume/area/1000, col = id), size = 0.3, alpha = 0.1) +
-  geom_line(aes(linetype=id, col = id), size = 1) +
+            aes(as.Date(yday, origin = as.Date('2019-01-01')), (movavg), col = id)) + #*volume/area/1000
+  geom_ribbon(aes(ymin = movavg_min , ymax = movavg_max , col = id), size = 0.3, alpha = 0.1) +
+  geom_line(aes(linetype=id, col = id), size = 1.5) +
   # ylab(expression("7-day mov. average of seasonal decomposed total flux rate [g DO"*~m^{-2}*""*~d^{-1}*"]")) +
   ylab(expression("Filtered seasonal total NEP [g DO"*~m^{-2}*""*~d^{-1}*"]")) +
   # xlab('Day of the year') +
@@ -30,9 +31,9 @@ g1 = ggplot(seasonal.df[!is.na(seasonal.df$movavg),],
 
 cum.seasonal.df$id <- factor(cum.seasonal.df$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","Fish","Mendota","Monona")))
 
-g2=ggplot(cum.seasonal.df, aes(as.Date(yday, origin = as.Date('2019-01-01')), movavg*volume/area/1000, col = id)) +
-  geom_ribbon(aes(ymin = movavg_min * volume/area/1000, ymax = movavg_max * volume/area/1000, col = id), size = 0.3, alpha = 0.1)+
-  geom_line(aes(linetype=id, col = id), size = 1)+
+g2=ggplot(cum.seasonal.df, aes(as.Date(yday, origin = as.Date('2019-01-01')), movavg, col = id)) +
+  geom_ribbon(aes(ymin = movavg_min, ymax = movavg_max, col = id), size = 0.3, alpha = 0.1)+
+  geom_line(aes(linetype=id, col = id), size = 1.5)+
   # ylab(expression("7-day mov. average of seasonal decomposed total flux rate [g DO"*~m^{-2}*""*~d^{-1}*"]")) +
   ylab(expression("Filtered cum. sum total NEP [g DO"*~m^{-2}*""*~d^{-1}*"]")) +
   # xlab('Day of the year') +
