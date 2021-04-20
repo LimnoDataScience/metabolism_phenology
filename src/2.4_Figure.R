@@ -12,12 +12,12 @@ cum.flux_min = read_csv('Processed_Output/Fluxes_cumFluxmin.csv')
 # name.chane.annual.flux <- annual.flux
 # colnames(name.chane.annual.flux) <- c('Year', 'ATM', 'NEP_epi', 'NEP_hypo', 'SED', 'NEP_tot', 'ENTR_epi',
 #                                       'ENTR_hypo', 'ID')
-
+colnames(cum.flux) <- c('time', 'Atm', 'NEP,epi', 'NEP,hypo','Sed','Total NEP', 'id')
 cum.flux$Sed = cum.flux$Sed * (-1)
 m.cum.flux = reshape2::melt(cum.flux[,-c(1)])
 m.cum.flux$time = cum.flux$time
 
-# colnames(cum.flux_max) <- c('time', 'Atm', 'NEP,epi', 'NEP,hypo','Sed','Total NEP', 'id')
+
 # cum.flux_max$Sed = cum.flux_max$Sed * (-1)
 # m.cum.flux_max =reshape2::melt(cum.flux_max[,-c(1)])
 # m.cum.flux_max$time = cum.flux_max$time
