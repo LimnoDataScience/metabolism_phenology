@@ -69,7 +69,7 @@ p1 = ggplot(flux.nepTot) +
         #legend.position = 'bottom',
         # legend.title=element_blank());p1
   );p1
-ggsave(p1, filename = 'Figures/fluxnep.pdf',width = 4, height = 4, dpi = 500)
+# ggsave(p1, filename = 'Figures/fluxnep.pdf',width = 4, height = 4, dpi = 500)
 
 
 flux.wide = flux.nepTot %>% select(lake, date, .trend) %>% 
@@ -110,7 +110,7 @@ g2 <- ggdendrogram(hc) +
         axis.text.y=element_blank(),
         axis.ticks.y=element_blank())+
   xlab('') + ylab(''); g2
-ggsave(g2, filename = 'Figures/fluxnep_dendro.pdf',width = 3, height = 1, dpi = 500)
+# ggsave(g2, filename = 'Figures/fluxnep_dendro.pdf',width = 3, height = 1, dpi = 500)
 
 
 # pdf(file = "Figures/fluxCorr.pdf", width = 3, height = 3)

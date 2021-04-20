@@ -77,6 +77,7 @@ transformed data {
 }
 
 parameters {
+  // real<lower=0> smooth_sigma;
   real<lower=0> sigma; // sd of oxygen state process error
   // real<lower=0> sig_nep; // sd of oxygen state process error
   // real<lower=0> sig_sed; // sd of oxygen state process error
@@ -128,7 +129,7 @@ transformed parameters {
         nep[i] = NEP[i_Param[i]] * theta0[i-1];
         mineral[i] = MIN[i_Param[i]] * theta0[i-1];
     	//mineral[i] = MIN[i_Param[i]] *  (fmax((DO_tot[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_tot[i-1]*tau+mu),1e-06))) * theta0[i-1];  
-	sed2[i] = SED2[i_Param[i]] *  (fmax((DO_tot[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_tot[i-1]*tau+mu),1e-06))) * theta2[i-1] / mean_depth;
+	sed2[i] = SED2[i_Param[i]] *  (fmax((DO_tot[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_tot[i-1]*tau+mu),1e-06))) * theta0[i-1] / mean_depth;
         nu[i] =  k600t[i-1]  *  (x_eqt[i-1] - DO_epi[i-1]) / mean_depth;
         DO_tot[i] =  DO_tot[i-1] + nep[i] - sed2[i] + nu[i] + mineral[i];
         DO_hyp[i] = DO_tot[i];
@@ -176,7 +177,8 @@ nep0 ~ normal(0,0.01);
 sed20 ~ normal(0,0.01);
 nu0 ~ normal(0,0.01);
 mineral0 ~ normal(0,0.01);
-sigma ~ cauchy(0, 5); 
+sigma ~ cauchy(0, 5);
+// smooth_sigma ~ cauchy(0, 5);  
 // sig_nep~ cauchy(0, 5);
 // sig_sed~ cauchy(0, 5);
 
