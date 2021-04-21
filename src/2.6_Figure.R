@@ -43,21 +43,17 @@ flux.nepTot = fluxes %>%
   # summarise(FnepTot = mean(.trend), date = first(date)) %>% 
   # mutate_if(is.numeric, scale2) %>% #scale data
   ungroup() %>% 
-  mutate(lake = factor(lake, levels = c('AL','BM', 'CR', 'SP', 'TR','ME','MO','FI'))) %>%
+  mutate(lake = factor(lake, levels = c('AL','BM', 'CR', 'SP', 'TR','FI','ME','MO'))) %>%
   mutate(region = as.factor(if_else(lake %in% c('BM', 'TR', 'CR', 'SP', 'AL', 'N','S'), 'North','South')))
+
 
 # Plot Trend of NEP fluxes 
 p1 = ggplot(flux.nepTot) +
   geom_path(aes(x = date, y = .trend, col = lake), size = 0.5) +
-  scale_color_brewer(palette = 'Spectral', name = 'Lake') +
+  scale_color_brewer(palette="Dark2", name = 'Lake') +
   facet_wrap(~region, nrow = 2) +
   theme_bw(base_size = 8) +
   ylab(expression("Trend signal total NEP flux [g DO"*~m^{-2}*~d^{-1}*"]")) +
-  # theme(axis.title.x = element_blank(), 
-  #       legend.position = 'bottom',
-  #       legend.title=element_blank(),
-  #       legend.margin = margin(1, 1, 1, 1),
-  #       legend.key.size = unit(0.3, "cm")) 
   theme(axis.title.x = element_blank(), 
         legend.box.background = element_rect(colour = "black"),
         legend.key.width =unit(0.3,"cm"),
@@ -65,8 +61,6 @@ p1 = ggplot(flux.nepTot) +
         legend.spacing.x = unit(0.2, 'cm'),
         legend.spacing.y = unit(0.1, 'cm'),
         legend.position=c(.1,.2),
-        #legend.position = 'bottom',
-        # legend.title=element_blank());p1
   );p1
 # ggsave(p1, filename = 'Figures/fluxnep.pdf',width = 4, height = 4, dpi = 500)
 
