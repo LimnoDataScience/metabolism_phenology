@@ -11,11 +11,11 @@ seasonal.df$id <- factor(seasonal.df$id , levels= (c("Allequash","BigMuskellunge
 
 
 g1 = ggplot(seasonal.df[!is.na(seasonal.df$movavg),], 
-            aes(as.Date(yday, origin = as.Date('2019-01-01')), (movavg), col = id)) + #*volume/area/1000
-  geom_ribbon(aes(ymin = movavg_min , ymax = movavg_max , col = id), size = 0.3, alpha = 0.1) +
+            aes(as.Date(yday, origin = as.Date('2019-01-01')), (movavg) + NEP_avg2, col = id)) + #*volume/area/1000
+  geom_ribbon(aes(ymin = movavg_min + NEP_avg2, ymax = movavg_max + NEP_avg2, col = id, fill = id), size = 0.3, alpha = 0.03) +
   geom_line(aes(linetype=id, col = id), size = 1.5) +
   # ylab(expression("7-day mov. average of seasonal decomposed total flux rate [g DO"*~m^{-2}*""*~d^{-1}*"]")) +
-  ylab(expression("Filtered seasonal total NEP [g DO"*~m^{-2}*""*~d^{-1}*"]")) +
+  ylab(expression(atop("Filtered seasonal total NEP + long-term","average [g DO"*~m^{-2}*""*~d^{-1}*"]"))) +
   # xlab('Day of the year') +
   scale_x_date(breaks = '2 months', labels = date_format("%b")) +
   scale_color_brewer(palette="Dark2") +
@@ -29,10 +29,12 @@ g1 = ggplot(seasonal.df[!is.na(seasonal.df$movavg),],
         legend.position = 'bottom')+
   guides(); g1#linetype = FALSE
 
+
+
 cum.seasonal.df$id <- factor(cum.seasonal.df$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","Fish","Mendota","Monona")))
 
-g2=ggplot(cum.seasonal.df, aes(as.Date(yday, origin = as.Date('2019-01-01')), movavg, col = id)) +
-  geom_ribbon(aes(ymin = movavg_min, ymax = movavg_max, col = id), size = 0.3, alpha = 0.1)+
+g2=ggplot(cum.seasonal.df, aes(as.Date(yday, origin = as.Date('2019-01-01')), movavg + NEP_avg2, col = id)) +
+  geom_ribbon(aes(ymin = movavg_min + NEP_avg2, ymax = movavg_max + NEP_avg2, col = id), size = 0.3, alpha = 0.1)+
   geom_line(aes(linetype=id, col = id), size = 1.5)+
   # ylab(expression("7-day mov. average of seasonal decomposed total flux rate [g DO"*~m^{-2}*""*~d^{-1}*"]")) +
   ylab(expression("Filtered cum. sum total NEP [g DO"*~m^{-2}*""*~d^{-1}*"]")) +
@@ -53,4 +55,4 @@ g2=ggplot(cum.seasonal.df, aes(as.Date(yday, origin = as.Date('2019-01-01')), mo
 g3 = g1 / g2 + plot_annotation(tag_levels = 'A') + plot_layout(guides = 'collect') &
   theme(legend.position='bottom'); g3
 
-ggsave(file = 'Figures/Fig_5.png', g3, dpi = 300, width =300, height = 250, units='mm')
+ggsave(file = 'Figures/Fig_5.png', g1, dpi = 300, width =300, height = 150, units='mm')

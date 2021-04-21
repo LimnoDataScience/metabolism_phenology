@@ -597,8 +597,9 @@ decompose.nep <- function(df.nep, name) {
   volume_hypo <- ifelse(df.nep$volume_hyp != 0, df.nep$volume_hyp, df.nep$volume_tot)
   # Three decomposed objects: NEP, NEP_max, and NEP_min
   assign(paste0(name,'.nep'), decompose(ts((df.nep$Fnep * volume_epi  - df.nep$Fsed * volume_hypo  + df.nep$Fmin * volume_hypo)/df.nep$area_epi/1000, frequency = 365)), envir = .GlobalEnv)
-  assign(paste0(name,'.nep_max'), decompose(ts((df.nep$fnep_upper * volume_epi  - df.nep$fsed2_upper * volume_hypo  + df.nep$fmineral_upper * volume_hypo)/df.nep$area_epi/1000, frequency = 365)), envir = .GlobalEnv)
-  assign(paste0(name,'.nep_min'), decompose(ts((df.nep$fnep_lower * volume_epi  - df.nep$fsed2_lower * volume_hypo  + df.nep$fmineral_lower * volume_hypo)/df.nep$area_epi/1000, frequency = 365)), envir = .GlobalEnv)
+  assign(paste0(name,'.nep_max'), decompose(ts((df.nep$fnep_upper * volume_epi  - df.nep$fsed2_upper * volume_hypo  + df.nep$fmineral_upper * volume_hypo)/df.nep$area_epi/1000, frequency = 365) ), envir = .GlobalEnv)
+  assign(paste0(name,'.nep_min'), decompose(ts((df.nep$fnep_lower * volume_epi  - df.nep$fsed2_lower * volume_hypo  + df.nep$fmineral_lower * volume_hypo)/df.nep$area_epi/1000, frequency = 365) ), envir = .GlobalEnv)
+  assign(paste0(name,'.nep_avg'), mean(ts((df.nep$fnep_lower * volume_epi  - df.nep$fsed2_lower * volume_hypo  + df.nep$fmineral_lower * volume_hypo)/df.nep$area_epi/1000, frequency = 365) , na.rm = TRUE), envir = .GlobalEnv)
 }
 decompose.nep(allequash, 'allequash')
 decompose.nep(bigmuskellunge, 'bigmuskellunge')
@@ -617,6 +618,8 @@ for (lake.id in lake.list) {
   seasonal.df[[lake.id]] = data.frame(id = lake.id, NEP = get(paste0(name,'.nep'))$seasonal[1:366], 
              NEP_max = get(paste0(name,'.nep_max'))$seasonal[1:366], 
              NEP_min = get(paste0(name,'.nep_min'))$seasonal[1:366], 
+             NEP_avg = rep(get(paste0(name,'.nep_avg')),366),
+             NEP_avg2 = mean(get(paste0(name,'.nep'))$x - get(paste0(name,'.nep'))$seasonal, na.rm = TRUE),
              time = get(name)$datetime[1:366], volume = get(name)$volume_tot[1:366], area = get(name)$area_epi[1:366]) %>%
     mutate(yday = yday(time)) %>% 
     mutate(movavg = rollmean(NEP, k = 7, na.pad = TRUE)) %>% 
