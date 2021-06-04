@@ -396,7 +396,6 @@ for (lake.id in lake.list){
   Fsed_min = areal.fluxes('fsed2_lower', hypoV)
   FentrHypo_min = areal.fluxes('fentr_hyp_lower', hypoV)
   
-  plot(odem_stan$Fentr2 * odem_stan$volume_hyp+odem_stan$Fentr1 * odem_stan$volume_epi);grid()
   #####################
   # Calculate cumulatives
   
@@ -653,4 +652,195 @@ seasonal.df = seasonal.df %>%
 
 write_csv(seasonal.df, 'Processed_Output/NEP_seasonal.csv')
 write_csv(cum.seasonal.df, 'Processed_Output/NEP_seasonal_cumulative.csv')
+
+
+decompose.nep <- function(df.nep, name) {
+  volume_epi <- ifelse(df.nep$volume_epi != 0, df.nep$volume_epi, df.nep$volume_tot)
+  volume_hypo <- ifelse(df.nep$volume_hyp != 0, df.nep$volume_hyp, df.nep$volume_tot)
+  # Three decomposed objects: NEP, NEP_max, and NEP_min
+  assign(paste0(name,'.nep'), decompose(ts((df.nep$Fnep * volume_epi  )/df.nep$area_epi/1000, frequency = 365)), envir = .GlobalEnv) #- df.nep$Fsed * volume_hypo  + df.nep$Fmin * volume_hypo
+  assign(paste0(name,'.nep_max'), decompose(ts((df.nep$fnep_upper * volume_epi  )/df.nep$area_epi/1000, frequency = 365) ), envir = .GlobalEnv) # - df.nep$fsed2_upper * volume_hypo  + df.nep$fmineral_upper * volume_hypo
+  assign(paste0(name,'.nep_min'), decompose(ts((df.nep$fnep_lower * volume_epi)/df.nep$area_epi/1000, frequency = 365) ), envir = .GlobalEnv) #  - df.nep$fsed2_lower * volume_hypo  + df.nep$fmineral_lower * volume_hypo
+  assign(paste0(name,'.nep_avg'), mean(ts((df.nep$fnep_lower * volume_epi )/df.nep$area_epi/1000, frequency = 365) , na.rm = TRUE), envir = .GlobalEnv)# - df.nep$fsed2_lower * volume_hypo  + df.nep$fmineral_lower * volume_hypo
+}
+decompose.nep(allequash, 'allequash')
+decompose.nep(bigmuskellunge, 'bigmuskellunge')
+decompose.nep(crystal, 'crystal')
+decompose.nep(fish, 'fish')
+decompose.nep(mendota, 'mendota')
+decompose.nep(monona, 'monona')
+decompose.nep(sparkling, 'sparkling')
+decompose.nep(trout, 'trout')
+
+# Create data frame of seasonal patterns 
+seasonal.df = list()
+cum.seasonal.df = list()
+for (lake.id in lake.list) {
+  name = tolower(lake.id)
+  seasonal.df[[lake.id]] = data.frame(id = lake.id, NEP = get(paste0(name,'.nep'))$seasonal[1:366], 
+                                      NEP_max = get(paste0(name,'.nep_max'))$seasonal[1:366], 
+                                      NEP_min = get(paste0(name,'.nep_min'))$seasonal[1:366], 
+                                      NEP_avg = rep(get(paste0(name,'.nep_avg')),366),
+                                      NEP_avg2 = mean(get(paste0(name,'.nep'))$x - get(paste0(name,'.nep'))$seasonal, na.rm = TRUE),
+                                      time = get(name)$datetime[1:366], volume = get(name)$volume_tot[1:366], area = get(name)$area_epi[1:366]) %>%
+    mutate(yday = yday(time)) %>% 
+    mutate(movavg = rollmean(NEP, k = 7, na.pad = TRUE)) %>% 
+    mutate(movavg_max = rollmean(NEP_max, k = 7, na.pad = TRUE)) %>% 
+    mutate(movavg_min = rollmean(NEP_min, k = 7, na.pad = TRUE)) %>% 
+    mutate(loc = if_else(lake.id %in% c('Fish','Mendota','Monona','Wingra'), 'South', 'North'))
+  
+  day.df = seasonal.df[[lake.id]] %>% arrange(id, yday) # arrange from start of the year
+  cum.seasonal.df[[lake.id]] = seasonal.df[[lake.id]] %>% arrange(id, yday) %>% # arrange from start of the year
+    group_by(id) %>% 
+    mutate(NEP = cumsum(NEP), NEP_max = cumsum(NEP_max), NEP_min = cumsum(NEP_min)) %>% 
+    mutate(movavg = rollmean(NEP, k = 7, na.pad = TRUE)) %>% 
+    mutate(movavg_max = rollmean(NEP_max, k = 7, na.pad = TRUE)) %>% 
+    mutate(movavg_min = rollmean(NEP_min, k = 7, na.pad = TRUE))
+}
+
+seasonal.df = bind_rows(seasonal.df)
+seasonal.df$id <- factor(seasonal.df$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","Fish","Mendota","Monona")))
+
+cum.seasonal.df = bind_rows(cum.seasonal.df)
+cum.seasonal.df$id <- factor(cum.seasonal.df$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","Fish","Mendota","Monona")))
+
+# seasonal.df = seasonal.df %>%
+#   mutate(var_mean = movavg * volume/area/1000,
+#          var_max = movavg_max * volume/area/1000,
+#          var_min = movavg_min * volume/area/1000)
+seasonal.df = seasonal.df %>%
+  mutate(var_mean = movavg/area/1000,
+         var_max = movavg_max/area/1000,
+         var_min = movavg_min/area/1000)
+
+write_csv(seasonal.df, 'Processed_Output/NEP_seasonal-epi.csv')
+write_csv(cum.seasonal.df, 'Processed_Output/NEP_seasonal_cumulative-epi.csv')
+
+decompose.nep <- function(df.nep, name) {
+  volume_epi <- ifelse(df.nep$volume_epi != 0, df.nep$volume_epi, df.nep$volume_tot)
+  volume_hypo <- ifelse(df.nep$volume_hyp != 0, df.nep$volume_hyp, df.nep$volume_tot)
+  # Three decomposed objects: NEP, NEP_max, and NEP_min
+  assign(paste0(name,'.nep'), decompose(ts(( df.nep$Fmin * volume_hypo )/df.nep$area_epi/1000, frequency = 365)), envir = .GlobalEnv) #
+  assign(paste0(name,'.nep_max'), decompose(ts(( df.nep$fmineral_upper * volume_hypo )/df.nep$area_epi/1000, frequency = 365) ), envir = .GlobalEnv) # 
+  assign(paste0(name,'.nep_min'), decompose(ts(( df.nep$fmineral_lower * volume_hypo)/df.nep$area_epi/1000, frequency = 365) ), envir = .GlobalEnv) #  
+  assign(paste0(name,'.nep_avg'), mean(ts(( df.nep$fmineral_lower * volume_hypo )/df.nep$area_epi/1000, frequency = 365) , na.rm = TRUE), envir = .GlobalEnv)# 
+}
+decompose.nep(allequash, 'allequash')
+decompose.nep(bigmuskellunge, 'bigmuskellunge')
+decompose.nep(crystal, 'crystal')
+decompose.nep(fish, 'fish')
+decompose.nep(mendota, 'mendota')
+decompose.nep(monona, 'monona')
+decompose.nep(sparkling, 'sparkling')
+decompose.nep(trout, 'trout')
+
+# Create data frame of seasonal patterns 
+seasonal.df = list()
+cum.seasonal.df = list()
+for (lake.id in lake.list) {
+  name = tolower(lake.id)
+  seasonal.df[[lake.id]] = data.frame(id = lake.id, NEP = get(paste0(name,'.nep'))$seasonal[1:366], 
+                                      NEP_max = get(paste0(name,'.nep_max'))$seasonal[1:366], 
+                                      NEP_min = get(paste0(name,'.nep_min'))$seasonal[1:366], 
+                                      NEP_avg = rep(get(paste0(name,'.nep_avg')),366),
+                                      NEP_avg2 = mean(get(paste0(name,'.nep'))$x - get(paste0(name,'.nep'))$seasonal, na.rm = TRUE),
+                                      time = get(name)$datetime[1:366], volume = get(name)$volume_tot[1:366], area = get(name)$area_epi[1:366]) %>%
+    mutate(yday = yday(time)) %>% 
+    mutate(movavg = rollmean(NEP, k = 7, na.pad = TRUE)) %>% 
+    mutate(movavg_max = rollmean(NEP_max, k = 7, na.pad = TRUE)) %>% 
+    mutate(movavg_min = rollmean(NEP_min, k = 7, na.pad = TRUE)) %>% 
+    mutate(loc = if_else(lake.id %in% c('Fish','Mendota','Monona','Wingra'), 'South', 'North'))
+  
+  day.df = seasonal.df[[lake.id]] %>% arrange(id, yday) # arrange from start of the year
+  cum.seasonal.df[[lake.id]] = seasonal.df[[lake.id]] %>% arrange(id, yday) %>% # arrange from start of the year
+    group_by(id) %>% 
+    mutate(NEP = cumsum(NEP), NEP_max = cumsum(NEP_max), NEP_min = cumsum(NEP_min)) %>% 
+    mutate(movavg = rollmean(NEP, k = 7, na.pad = TRUE)) %>% 
+    mutate(movavg_max = rollmean(NEP_max, k = 7, na.pad = TRUE)) %>% 
+    mutate(movavg_min = rollmean(NEP_min, k = 7, na.pad = TRUE))
+}
+
+seasonal.df = bind_rows(seasonal.df)
+seasonal.df$id <- factor(seasonal.df$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","Fish","Mendota","Monona")))
+
+cum.seasonal.df = bind_rows(cum.seasonal.df)
+cum.seasonal.df$id <- factor(cum.seasonal.df$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","Fish","Mendota","Monona")))
+
+# seasonal.df = seasonal.df %>%
+#   mutate(var_mean = movavg * volume/area/1000,
+#          var_max = movavg_max * volume/area/1000,
+#          var_min = movavg_min * volume/area/1000)
+seasonal.df = seasonal.df %>%
+  mutate(var_mean = movavg/area/1000,
+         var_max = movavg_max/area/1000,
+         var_min = movavg_min/area/1000)
+
+write_csv(seasonal.df, 'Processed_Output/NEP_seasonal-hyp.csv')
+write_csv(cum.seasonal.df, 'Processed_Output/NEP_seasonal_cumulative-hyp.csv')
+
+
+decompose.nep <- function(df.nep, name) {
+  volume_epi <- ifelse(df.nep$volume_epi != 0, df.nep$volume_epi, df.nep$volume_tot)
+  volume_hypo <- ifelse(df.nep$volume_hyp != 0, df.nep$volume_hyp, df.nep$volume_tot)
+  # Three decomposed objects: NEP, NEP_max, and NEP_min
+  assign(paste0(name,'.nep'), decompose(ts((- df.nep$Fsed * volume_hypo   )/df.nep$area_epi/1000, frequency = 365)), envir = .GlobalEnv) #
+  assign(paste0(name,'.nep_max'), decompose(ts((- df.nep$fsed2_upper * volume_hypo  )/df.nep$area_epi/1000, frequency = 365) ), envir = .GlobalEnv) # 
+  assign(paste0(name,'.nep_min'), decompose(ts((- df.nep$fsed2_lower * volume_hypo  )/df.nep$area_epi/1000, frequency = 365) ), envir = .GlobalEnv) #  
+  assign(paste0(name,'.nep_avg'), mean(ts((- df.nep$fsed2_lower * volume_hypo  )/df.nep$area_epi/1000, frequency = 365) , na.rm = TRUE), envir = .GlobalEnv)# 
+}
+decompose.nep(allequash, 'allequash')
+decompose.nep(bigmuskellunge, 'bigmuskellunge')
+decompose.nep(crystal, 'crystal')
+decompose.nep(fish, 'fish')
+decompose.nep(mendota, 'mendota')
+decompose.nep(monona, 'monona')
+decompose.nep(sparkling, 'sparkling')
+decompose.nep(trout, 'trout')
+
+# Create data frame of seasonal patterns 
+seasonal.df = list()
+cum.seasonal.df = list()
+for (lake.id in lake.list) {
+  name = tolower(lake.id)
+  seasonal.df[[lake.id]] = data.frame(id = lake.id, NEP = get(paste0(name,'.nep'))$seasonal[1:366], 
+                                      NEP_max = get(paste0(name,'.nep_max'))$seasonal[1:366], 
+                                      NEP_min = get(paste0(name,'.nep_min'))$seasonal[1:366], 
+                                      NEP_avg = rep(get(paste0(name,'.nep_avg')),366),
+                                      NEP_avg2 = mean(get(paste0(name,'.nep'))$x - get(paste0(name,'.nep'))$seasonal, na.rm = TRUE),
+                                      time = get(name)$datetime[1:366], volume = get(name)$volume_tot[1:366], area = get(name)$area_epi[1:366]) %>%
+    mutate(yday = yday(time)) %>% 
+    mutate(movavg = rollmean(NEP, k = 7, na.pad = TRUE)) %>% 
+    mutate(movavg_max = rollmean(NEP_max, k = 7, na.pad = TRUE)) %>% 
+    mutate(movavg_min = rollmean(NEP_min, k = 7, na.pad = TRUE)) %>% 
+    mutate(loc = if_else(lake.id %in% c('Fish','Mendota','Monona','Wingra'), 'South', 'North'))
+  
+  day.df = seasonal.df[[lake.id]] %>% arrange(id, yday) # arrange from start of the year
+  cum.seasonal.df[[lake.id]] = seasonal.df[[lake.id]] %>% arrange(id, yday) %>% # arrange from start of the year
+    group_by(id) %>% 
+    mutate(NEP = cumsum(NEP), NEP_max = cumsum(NEP_max), NEP_min = cumsum(NEP_min)) %>% 
+    mutate(movavg = rollmean(NEP, k = 7, na.pad = TRUE)) %>% 
+    mutate(movavg_max = rollmean(NEP_max, k = 7, na.pad = TRUE)) %>% 
+    mutate(movavg_min = rollmean(NEP_min, k = 7, na.pad = TRUE))
+}
+
+seasonal.df = bind_rows(seasonal.df)
+seasonal.df$id <- factor(seasonal.df$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","Fish","Mendota","Monona")))
+
+cum.seasonal.df = bind_rows(cum.seasonal.df)
+cum.seasonal.df$id <- factor(cum.seasonal.df$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","Fish","Mendota","Monona")))
+
+# seasonal.df = seasonal.df %>%
+#   mutate(var_mean = movavg * volume/area/1000,
+#          var_max = movavg_max * volume/area/1000,
+#          var_min = movavg_min * volume/area/1000)
+seasonal.df = seasonal.df %>%
+  mutate(var_mean = movavg/area/1000,
+         var_max = movavg_max/area/1000,
+         var_min = movavg_min/area/1000)
+
+write_csv(seasonal.df, 'Processed_Output/NEP_seasonal-sed.csv')
+write_csv(cum.seasonal.df, 'Processed_Output/NEP_seasonal_cumulative-sed.csv')
+
+
+
 
