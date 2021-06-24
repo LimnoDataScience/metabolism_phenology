@@ -33,7 +33,10 @@ g.conc <- ggplot(subset(mendota, year > 2002 & year < 2006)) +
   geom_point(aes(x=datetime, y=DO_obs_tot/1000, col = 'Total obs.'), size=2) +
   # facet_wrap(~ year) +
   ylab(expression("Conc. [g DO"*~m^{-3}*"]")) +
-  scale_color_manual(values = c('red1','red4','lightblue3','lightblue1','gold')) +
+  scale_color_manual(values = c('red1','red4','lightblue3','lightblue1','gold'),
+                     guide = guide_legend(override.aes = list(
+                       linetype = c('blank', 'solid', 'blank', 'solid', 'blank'),
+                     shape = c(16, NA, 16, NA, 16)))) +
   xlab('') +
   # ggtitle(paste0(lake.id,'_RMSE:',rmse,'_NSE:',nse))+
   ylim(c(-2,20)) +  
