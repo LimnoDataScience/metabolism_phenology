@@ -81,4 +81,5 @@ g1 <- g1.north + (g1.south / g3.NEP + plot_layout(heights = c(3,2))) +
   plot_annotation(tag_levels = 'A'); g1
 
 ggsave(file = 'Figures/Fig_4.png', g1, dpi = 700, width = 6.5, height = 4.5, units='in')
+ggsave(file = 'Figures/Fig_4.pdf', g1, dpi = 600, width = 6.5, height = 4.5, units='in')
 

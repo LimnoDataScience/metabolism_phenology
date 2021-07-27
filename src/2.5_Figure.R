@@ -102,6 +102,7 @@ g7 = (g1 + g4) / (g5 + g6) + plot_annotation(tag_levels = 'A') + plot_layout(gui
   theme(legend.position='bottom'); g7
 
 ggsave(file = 'Figures/Fig_5.png', g7, dpi = 300, width =500, height = 300, units='mm')
+ggsave(file = 'Figures/Fig_5.pdf', g7, dpi = 600, width =500, height = 300, units='mm')
 
 ggplot() +
   geom_line(data = subset(seasonal.df.hyp[!is.na(seasonal.df$movavg),], id == c('Mendota', 'Monona')),

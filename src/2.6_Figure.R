@@ -146,4 +146,5 @@ p1 + (p.corr / g2 + plot_layout(heights = c(2,1))) +
   plot_layout(widths = c(1,0.7)) +
   plot_annotation(tag_levels = 'A')
 ggsave('Figures/Fig_6.png', width = 6.5, height = 4, dpi = 500)
+ggsave('Figures/Fig_6.pdf', width = 6.5, height = 4, dpi = 600)
  

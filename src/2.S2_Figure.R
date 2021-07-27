@@ -111,6 +111,7 @@ g7 = (g1 + g4) / (g5 + g6) + plot_annotation(tag_levels = 'A') + plot_layout(gui
   theme(legend.position='bottom'); g7
 
 ggsave(file = 'Figures/Fig_S2.png', g7, dpi = 300, width =500, height = 300, units='mm')
+ggsave(file = 'Figures/Fig_S2.pdf', g7, dpi = 600, width =500, height = 300, units='mm')
 
 library(RColorBrewer)
 my_palette = brewer.pal(8, "Dark2")[c(6,7,8)]
@@ -123,7 +124,7 @@ g1 = ggplot(seasonal.df.south[!is.na(seasonal.df.south$movavg),],
   # xlab('Day of the year') +
   scale_x_date(breaks = '2 months', labels = date_format("%b")) +
   # scale_color_brewer(palette="Dark2") +
-  scale_color_manual(values = my_palette[3]) +
+  scale_color_manual(values = my_palette) +
   scale_linetype_manual(values = c(2,2,2,1,1,2,2,2))+
   theme_minimal()+
   geom_hline(yintercept = 0,linetype="dotted", 
@@ -195,3 +196,4 @@ g7 = (g1 + g4) / (g5 + g6) + plot_annotation(tag_levels = 'A') + plot_layout(gui
   theme(legend.position='bottom'); g7
 
 ggsave(file = 'Figures/Fig_S3.png', g7, dpi = 300, width =500, height = 300, units='mm')
+ggsave(file = 'Figures/Fig_S3.pdf', g7, dpi = 600, width =500, height = 300, units='mm')

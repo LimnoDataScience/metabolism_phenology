@@ -42,7 +42,11 @@ fitdata$id <- factor(fitdata$id , levels= (c("Allequash","BigMuskellunge","Cryst
 
 ind <- sample(c(TRUE, FALSE), nrow(fitdata), replace=TRUE, prob=c(0.5, 0.5))
 
+line1to1 = expand_grid(id = unique(fitdata$id), x = 0, y = 0) %>% bind_rows(expand_grid(id = unique(fitdata$id), x = 15, y = 15)) 
+
+
 g1 <- ggplot(data = fitdata[ind,], aes(x=obsdata/1000, y=simdata/1000, col = type))+
+  geom_line(data = line1to1, aes(x = x, y = y), col = 'black', linetype = 'dashed', alpha = 0.5) +
   geom_point(alpha = 0.5) +
   geom_point(data = fitdata[!ind,], aes(x=obsdata/1000, y=simdata/1000, col = type), alpha = 0.5) +
   ylab(expression("Simulated DO conc. [g DO"*~m^{-3}*"]")) +
@@ -84,6 +88,8 @@ g1 <- ggplot(data = fitdata[ind,], aes(x=obsdata/1000, y=simdata/1000, col = typ
         legend.position = 'bottom'); g1
 
 ggsave(file = 'Figures/Fig_3.png', g1, dpi = 300, width =250, height = 250,
+       units='mm')
+ggsave(file = 'Figures/Fig_3.pdf', g1, dpi = 600, width =250, height = 250,
        units='mm')
 
 # library(gridExtra)

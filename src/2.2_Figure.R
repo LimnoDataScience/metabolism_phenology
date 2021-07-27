@@ -87,4 +87,7 @@ g <-g.param /g.flux / g.conc + plot_annotation(tag_levels = 'A'); g
 ggsave(file = paste0('Figures/Fig_2.png'), g, dpi = 300, width =266, height = 300,
        units='mm')
 
+ggsave(file = paste0('Figures/Fig_2.pdf'), g, dpi = 600, width =266, height = 300,
+       units='mm')
+
 

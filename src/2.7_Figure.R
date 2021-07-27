@@ -163,6 +163,7 @@ g1 <- ggplot(m.df.grd, aes(x = variable, y = lake, fill = as.factor(value))) +
 g <- g.cluster / g1 + plot_layout(heights = c(1.5,2))  + plot_annotation(tag_levels = 'A'); g
 # g <- g.cluster / g1 + plot_annotation(tag_levels = 'A') + plot_layout(heights = c(1.5,2)); g
 ggsave(file = 'Figures/Fig_7.png', g, dpi = 500, width =6, height = 4)
+ggsave(file = 'Figures/Fig_7.pdf', g, dpi = 600, width =6, height = 4)
 
 
 ## Cluster stratification duration boxplots
