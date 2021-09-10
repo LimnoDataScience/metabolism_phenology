@@ -89,5 +89,3 @@ ggsave(file = paste0('Figures/Fig_2.png'), g, dpi = 300, width =266, height = 30
 
 ggsave(file = paste0('Figures/Fig_2.pdf'), g, dpi = 600, width =266, height = 300,
        units='mm')
-
-

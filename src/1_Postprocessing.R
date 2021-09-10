@@ -211,7 +211,8 @@ dat <- fit_clean %>% filter(name %in% outvars) %>%
          middle,
          upper,
          name,
-         index)
+         index) %>%
+  mutate(mean = as.numeric(mean))
 
 dat_sigma <- fit_clean %>% filter(name %in% c('smooth_sigma')) %>% 
   dplyr::select(mean,
