@@ -23,6 +23,18 @@ calc_nse <- function(mod_data, obs_data){
   return (1-mean((mod-obs)**2,na.rm = TRUE)/mean((obs-mean(obs, na.rm=TRUE))**2,na.rm = TRUE)) # RMSE
 }
 
+interpolate_nearest.neighbor <- function(data){
+  for (i in 1:ncol(data)){
+    idx <- which(!is.na(data[,i]))
+    for (j in seq(1, length(data[,i]))[!(seq(1, length(data[,i])) %in% idx)]){
+      find.min <- which.min((idx-j)^2)
+      data[j,i] = data[idx[find.min], i]
+    }
+  }
+  return(data)
+}
+
+
 lake.list <- c('Crystal')
 lake.list.Abr <- c('Crystal' = 'CR')
 
@@ -228,7 +240,8 @@ for (lake.id in lake.list){
     mutate(name = strsplit(var, "\\[|\\]|,") %>% map_chr(~.x[1]),
            index = strsplit(var, "\\[|\\]|,") %>% map_int(~as.integer(.x[2])))
   
-  outvars <- c("o2_epi","o2_hyp","fatm","fnep","fsed2","fmineral","fentr_epi","fentr_hyp","fdiffex","NEP_mgm3d","SED_mgm2d","MIN_mgm3d")
+  outvars <- c("o2_epi","o2_hyp","fatm","fnep","fsed2","fmineral","fentr_epi","fentr_hyp","fdiffex","NEP_mgm3d","SED_mgm2d","MIN_mgm3d",
+               'fsed_monod', 'fsed_first')
   
   dat <- fit_clean %>% filter(name %in% outvars) %>% 
     dplyr::select(mean,
@@ -412,55 +425,85 @@ g.conc <- ggplot(subset(lake.odem, year > 1995 & year < 1997)) +
   ylim(c(-2,20)) +  
   custom.theme; g.conc
 
+mu = mean(lake.odem$DO_obs_epi, na.rm = T);
+tau = sd(lake.odem$DO_obs_epi, na.rm = T);
+lake.odem$do_trans = (lake.odem$o2_hyp_middle - mu)/tau #DO_tot[i-1]*tau+mu
+
 sed.flux = rep(NA, nrow(lake.odem))
 nep.flux = rep(NA, nrow(lake.odem))
 sed_first =  rep(NA, nrow(lake.odem))
 sed_monod = rep(NA, nrow(lake.odem))
+sed.flux_trans = rep(NA, nrow(lake.odem))
 for (ii in 2:nrow(lake.odem)){
   sed.flux[ii] = (j.m$nSED[ii-1] *  (lake.odem$o2_hyp_middle[ii-1])/(dummyinput$khalf + lake.odem$o2_hyp_middle[ii-1]) * dummyinput$theta2[ii-1]) / (dummyinput$volume_hyp[ii-1]/dummyinput$area_hyp[ii-1]) + 
     (lake.odem$o2_hyp_middle[ii-1] * dummyinput$diff_mol/dummyinput$z_dbl* dummyinput$theta2[ii-1]) / (dummyinput$volume_hyp[ii-1]/dummyinput$area_hyp[ii-1]) 
   nep.flux[ii] = j.m$nMIN[ii-1] * dummyinput$theta2[ii-1]
   sed_monod[ii] = (j.m$nSED[ii-1] *  (lake.odem$o2_hyp_middle[ii-1])/(dummyinput$khalf + lake.odem$o2_hyp_middle[ii-1]) * dummyinput$theta2[ii-1]) / (dummyinput$volume_hyp[ii-1]/dummyinput$area_hyp[ii-1])
   sed_first[ii] = (lake.odem$o2_hyp_middle[ii-1] * dummyinput$diff_mol/dummyinput$z_dbl* dummyinput$theta2[ii-1]) / (dummyinput$volume_hyp[ii-1]/dummyinput$area_hyp[ii-1]) 
-}
+  sed.flux_trans[ii] = (j.m$nSED[ii-1] *  (lake.odem$do_trans[ii-1])/(dummyinput$khalf + lake.odem$do_trans[ii-1]) * dummyinput$theta2[ii-1]) / (dummyinput$volume_hyp[ii-1]/dummyinput$area_hyp[ii-1]) + 
+    (lake.odem$do_trans[ii-1] * dummyinput$diff_mol/dummyinput$z_dbl* dummyinput$theta2[ii-1]) / (dummyinput$volume_hyp[ii-1]/dummyinput$area_hyp[ii-1]) 
+  
+  }
 # sed.flux = (lake.odem$SED *  (lake.odem$o2_hyp_middle)/(dummyinput$khalf + lake.odem$o2_hyp_middle) * dummyinput$theta2) / (dummyinput$volume_hyp/dummyinput$area_hyp) + 
   # (lake.odem$o2_hyp_middle * dummyinput$diff_mol/dummyinput$z_dbl* dummyinput$theta2) / (dummyinput$volume_hyp/dummyinput$area_hyp) 
-plot(lake.odem$fsed2_middle)
-points(sed.flux * (-1), col = 'blue')
+plot(sed.flux * (-1)/1000, ylim = c(-10,10))
+points(lake.odem$fsed2_middle/1000, col = 'blue')
+points(lake.odem$fsed_monod_middle/1000, col = 'darkgreen')
+points(sed_monod * (-1)/1000, col = 'green')
+points(lake.odem$fsed_first_middle/1000, col = 'darkred')
+points(sed_first * (-1)/1000, col = 'red')
+points(sed.flux_trans * (-1)/1000, col = 'yellow')
+
+
+
+plot(scale(lake.odem$fsed2_middle/1000), ylim = c(-10,10))
+points(scale(sed.flux_trans * (-1)/1000), col = 'yellow')
+
+plot(lake.odem$fsed_first_middle, sed_first)
+plot(lake.odem$fsed_monod_middle, sed_monod)
 
 lake.odem$fsed2_custom <- sed.flux * (-1)
 
 plot(lake.odem$fmineral_middle)
 points(nep.flux , col = 'blue')
 
+ggplot(subset(lake.odem, year > 1995 & year < 1999)) + 
+  geom_line(aes(x=datetime, y=(-1)*fsed2_middle/1000, col = 'Fsed')) +
+  geom_ribbon(aes(x=datetime, ymin=(-1)*fsed2_lower/1000, ymax=(-1)*fsed2_upper/1000, col = 'Fsed'), linetype =2,alpha=0.2) +
+  # geom_line(aes(x=datetime, y=fsed2_custom/1000, col = 'Fsed_custom')) +
+  geom_line(aes(x=datetime, y=fsed_monod_middle/1000 *(-1), col = 'Monod')) +
+  geom_line(aes(x=datetime, y=fsed_first_middle/1000, col = 'First')) +
+  geom_line(aes(x=datetime, y=fmineral_middle/1000, col = 'Fnep,hypo')) +
+  # geom_line(aes(x=datetime, y=do_trans/1000, col = 'Trans')) +
+  # geom_line(aes(x=datetime, y=(-1)*(fsed_first_middle/1000 + fsed_monod_middle/1000), col = 'Sum')) +
+  # geom_line(aes(x=datetime, y=(-1)*(abs(fsed_first_middle/1000) + abs(fsed_monod_middle/1000)), col = 'Neg Sum')) +
+  ylab(expression("Sim. fluxes [g DO"*~m^{-3}*~d^{-1}*"]")) +
+  scale_color_manual(values = c("#E69F00", "#56B4E9", "#009E73", "magenta", 'lightblue', "green", 'cyan')) +
+  # ggtitle(paste0(lake.id,'_RMSE:',rmse,'_NSE:',nse))+
+  custom.theme; 
+
+
+
+
+
 g.flux <- ggplot(subset(lake.odem, year > 1995 & year < 1999)) + 
-  geom_line(aes(x=datetime, y=fnep_middle, col = 'Fnep,epi')) +
+  geom_line(aes(x=datetime, y=fnep_middle/1000, col = 'Fnep,epi')) +
   # geom_ribbon(aes(x=datetime, ymin=fnep_lower, ymax=fnep_upper, col = 'Fnep,epi'), linetype =2,alpha=0.2) +
-  geom_line(aes(x=datetime, y=fmineral_middle, col = 'Fnep,hypo')) +
+  geom_line(aes(x=datetime, y=fmineral_middle/1000, col = 'Fnep,hypo')) +
   # geom_ribbon(aes(x=datetime, ymin=fmineral_lower, ymax=fmineral_upper, col = 'Fnep,hypo'), linetype =2, alpha=0.2) +
-  geom_line(aes(x=datetime, y=(-1)*fsed2_middle, col = 'Fsed')) +
+  geom_line(aes(x=datetime, y=(-1)*fsed2_middle/1000, col = 'Fsed')) +
   # geom_ribbon(aes(x=datetime, ymin=(-1)*fsed2_lower, ymax=(-1)*fsed2_upper, col = 'Fsed'), linetype =2,alpha=0.2) +
-  geom_line(aes(x=datetime, y=fdiffex_middle, col = 'Fdiff')) +
+  geom_line(aes(x=datetime, y=fdiffex_middle/1000, col = 'Fdiff')) +
   # geom_ribbon(aes(x=datetime, ymin=(-1)*fdiffex_lower, ymax=(-1)*fdiffex_upper, col = 'Fdiff'), linetype =2,alpha=0.2) +
-  geom_line(aes(x=datetime, y=fatm_middle, col = 'Fatm')) +
+  geom_line(aes(x=datetime, y=fatm_middle/1000, col = 'Fatm')) +
   # geom_ribbon(aes(x=datetime, ymin=fatm_lower, ymax=fatm_upper, col = 'Fatm'), linetype =2, alpha=0.2) +
-  geom_line(aes(x=datetime, y=Fentr1  , col = 'Fentr')) +
-  geom_line(aes(x=datetime, y=fsed2_custom, col = 'Fsed_custom')) +
+  geom_line(aes(x=datetime, y=Fentr1/1000  , col = 'Fentr')) +
+  geom_line(aes(x=datetime, y=fsed2_custom/1000, col = 'Fsed_custom')) +
   ylab(expression("Sim. fluxes [g DO"*~m^{-3}*~d^{-1}*"]")) +
   scale_color_manual(values = c("#E69F00", "#56B4E9", "#009E73", "magenta", 'lightblue', "green", 'cyan')) +
   # ggtitle(paste0(lake.id,'_RMSE:',rmse,'_NSE:',nse))+
   custom.theme; g.flux
 
-interpolate_nearest.neighbor <- function(data){
-  for (i in 1:ncol(data)){
-    idx <- which(!is.na(data[,i]))
-    for (j in seq(1, length(data[,i]))[!(seq(1, length(data[,i])) %in% idx)]){
-      find.min <- which.min((idx-j)^2)
-      data[j,i] = data[idx[find.min], i]
-    }
-  }
-  return(data)
-}
 
 
 
