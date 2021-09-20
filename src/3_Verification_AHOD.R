@@ -2,7 +2,248 @@
 library(tidyverse)
 library(patchwork)
 library(pracma)
-library(glmtools)
+library(utils)
+library(tools)
+# library(glmtools)
+
+# private function
+buildVal	<-	function(textLine, lineNum, blckName){
+  #-----function appends nml list with new values-----
+  # remove all text after comment string
+  textLine	<-	strsplit(textLine,'!')[[1]][1]
+  
+  if (!any(grep("=", textLine))){
+    stop(c("no hanging lines allowed in .nml, used ",textLine,'.\nSee line number:',lineNum,' in "&',blckName,'" section.'))
+  }
+  params	<-	strsplit(textLine,"=") # break text at "="
+  parNm	  <-	params[[1]][1]
+  parVl	  <-	params[[1]][2]
+  # figure out what parval is...if string, remove quotes and keep as string
+  # ***for boolean text, use "indentical" so that 0!= FALSE
+  # can be: string, number, comma-sep-numbers, or boolean
+  
+  # special case for date:
+  if (is.na(parVl)){
+    stop('Empty values after "', textLine, '" on line ', lineNum, 
+         '. \nPerhaps the values are on the next line?', call. = FALSE)
+  }
+  if (nchar(parVl>17) & substr(parVl,14,14)==':' & substr(parVl,17,17)==':'){
+    parVl<-paste(c(substr(parVl,1,11),' ',substr(parVl,12,nchar(parVl))),collapse='')
+  }
+  if (any(grep("'",parVl))){
+    
+    parVl	<-	gsub("'","",parVl)
+  }else if (any(grep("\"",parVl))){
+    parVl  <-	gsub("\"","",parVl)
+  }else if (isTRUE(grepl(".true.",parVl) || grepl(".false.",parVl))){
+    logicals <- unlist(strsplit(parVl,","))
+    parVl <- from.glm_boolean(logicals)
+  }else if (any(grep(",",parVl))){	# comma-sep-nums
+    parVl	<-	c(as.numeric(unlist(strsplit(parVl,","))))
+  }else {	# test for number
+    parVl	<-	as.numeric(parVl)
+  }
+  lineVal	<-	list(parVl)
+  names(lineVal)	<-	parNm
+  return(lineVal)
+}
+
+#' go from glm2.nml logical vectors to R logicals
+#' 
+#' @param values a vector of strings containing either .false. or .true.
+#' @return a logical vector
+#' @keywords internal
+#' @noRd
+from.glm_boolean <- function(values){
+  
+  logicals <- sapply(values, FUN = function(x){
+    if (!isTRUE(grepl(".true.", x) || grepl(".false.", x))){
+      stop(x, ' is not a .true. or .false.; conversion to TRUE or FALSE failed.', 
+           call. = FALSE)
+    }
+    return(ifelse(isTRUE(grepl(".true.", x)), TRUE, FALSE))
+  })
+  return(as.logical(logicals))
+}
+
+to.glm_boolean <- function(values){
+  val.logical <- values
+  values[val.logical] <- '.true.'
+  values[!val.logical] <- '.false.'
+  return(values)
+}
+
+# private function
+findBlck	<-	function(nml,argName){
+  
+  # test for argName being a string
+  if (!is.character(argName)){stop(c("parameter name must be a string"))}
+  fau <- " "
+  fault.string <- rep(fau,1000) # names fault matrix, only returned when empty match
+  blockNames	<-	names(nml)
+  blckI	<-	c()
+  for (i in seq_len(length(blockNames))){
+    if (any(argName %in% names(nml[[i]]))){
+      blckI	<- c(blckI,i)
+    } else {
+      one.i <- which(fault.string==fau)[1]
+      fault.string[one.i:(one.i+length(names(nml[[i]]))-1)]=names(nml[[i]])
+    }
+    
+  }
+  fault.string <- fault.string[!fault.string==fau] # is empty if found
+  # test to see if a block match was made
+  if (is.null(blckI)){stop(c("parameter name ",argName," not found in nml. Possible names:",paste(fault.string,collapse=', ')))}
+  return(blckI)
+}
+
+# private function
+setnmlList <- function(glm_nml,arg_list){
+  if (!is.list(arg_list)){stop("arg_list must be a list")}
+  
+  if (any(nchar(names(arg_list)) == 0) | length(names(arg_list)) == 0){
+    stop('arg_list must be a named list')
+  }
+  
+  arg_names  <-	names(arg_list)
+  
+  for (i in seq_len(length(arg_names))){
+    glm_nml <- set_nml(glm_nml,arg_name=arg_names[i],arg_val=arg_list[[i]])
+  }
+  
+  return(glm_nml)
+}
+
+# private function
+#' @importFrom utils tail
+is_nml_file <- function(nml_file){
+  
+  is_nml <- FALSE
+  fl_ext <- tail(strsplit(nml_file, "\\.")[[1]],1)
+  
+  if (fl_ext == 'nml'){
+    is_nml <- TRUE
+  }
+  return(is_nml)
+}
+
+#' @importFrom utils capture.output
+what_ascii <- function(file){
+  response <- capture.output(showNonASCIIfile(file))
+  return(response)
+}
+
+ascii_only <- function(file){
+  response <- what_ascii(file)
+  
+  
+  if (length(response) > 0){
+    return(FALSE)
+  } else {
+    return(TRUE)
+  }
+  
+}
+
+
+get_block <- function(glm_nml, arg_name, warn=TRUE){
+  arg_split = strsplit(arg_name,'::')[[1]]
+  if (length(arg_split) > 1){
+    blck = arg_split[1]
+    arg_name = get_arg_name(arg_name)
+  } else{
+    blck	<-	findBlck(glm_nml,arg_name)
+  }
+  if (length(blck) > 1){
+    if (warn)
+      warning(arg_name, " found in ", paste(names(glm_nml[blck]), collapse=' & '), ", returning the first. Try ",names(glm_nml[blck])[1],"::",arg_name, " for explicit match")
+    blck = blck[1]
+  }
+  
+  return(blck)
+}
+
+get_arg_name <- function(arg_name){
+  arg_split = strsplit(arg_name,'::')[[1]]
+  
+  if (length(arg_split) > 1){
+    blck = arg_split[1]
+    arg_name = arg_split[2]
+  }
+  return(arg_name)
+}
+read_nml  <-	function(nml_file = 'template'){
+  
+  nml_file <- nml_path_norm(nml_file)
+  
+  if (!ascii_only(nml_file)){
+    stop('non-ASCII characters found in nml file on line ', what_ascii(nml_file))
+  }
+  # skip all commented lines, return all variables and associated values
+  # requires NO return line variables (all variables must be completely defined on a single line)
+  c <- file(nml_file,"r") 
+  fileLines <- readLines(c)
+  close(c)
+  lineStart	<-	substr(fileLines,1,1)
+  # ignore comment lines or empty lines
+  ignoreLn	<-	lineStart=='!' | fileLines==""
+  lineStart	<-	lineStart[!ignoreLn]
+  fileLines	<-	fileLines[!ignoreLn]
+  # find all lines which start with "&" * requires FIRST char to be value
+  
+  lineIdx		<- seq(1,length(lineStart))
+  blckOpen	<-	lineIdx[lineStart=="&"]
+  blckClse	<-	lineIdx[lineStart=="/"]
+  
+  nml <- list()
+  for (i in seq_len(length(blckOpen))){
+    blckName   <-	substr(fileLines[blckOpen[i]], 
+                         2, nchar(fileLines[blckOpen[i]]))
+    blckName   <- gsub("\\s", "", blckName) 
+    oldNms	   <-	names(nml)
+    nml[[i]]   <-	list()
+    names(nml) <-	c(oldNms,blckName)
+    
+    carryover <- ''
+    
+    for (j in (blckOpen[i]+1):(blckClse[i]-1)){
+      
+      textLine	<-	paste(carryover, 
+                        gsub("\t", "", gsub(" ", "", fileLines[j])), sep = '')
+      
+      if(substr(textLine, 1, 1) != '!'){
+        # Add a check here, sometimes, if there is a hanging comma, 
+        #and only sometimes that means add next row
+        if(substr(textLine, nchar(textLine), nchar(textLine)) == ',' && 
+           j+1 <= length(fileLines) && 
+           !any(grep("=", fileLines[j + 1])) && 
+           !any(grep("/", fileLines[j + 1]))){
+          
+          carryover = textLine
+          next
+        }else{
+          carryover = ''
+        }
+        # else, line is commented out
+        lineVal	  <-	buildVal(textLine, lineNum = j, blckName)
+        nml[[i]]	<-	c(nml[[i]], lineVal)
+      }
+    }
+  }
+  nml <- .nml(nml)
+  return(nml)
+}
+
+nml_path_norm <- function(nml_file){
+  if (nml_file == "template"){
+    nml_file <- GLM3r::nml_template_path()
+  }
+  if (!is_nml_file(nml_file)){
+    stop(nml_file, ' is not of file type *.nml')
+  }
+  
+  return(nml_file)
+}
 
 custom.theme = theme_minimal() + 
   theme(axis.title.x = element_blank(),
@@ -127,12 +368,12 @@ check_lakes <- data.frame('flux.name' = c('allequash',
                                                                                                  'TR'))
 
 df.AHOD = data.frame('year' = NULL, 
-                            'AHOD' = NULL,
-                            'SED' = NULL,
+                     'AHOD' = NULL,
+                     'SED' = NULL,
                      'NEP' = NULL,
-                            'id' = NULL)
+                     'id' = NULL)
 
-for (loop in 1:nrow(check_lakes)){
+for (loop in c(3,4)){#nrow(check_lakes)
   
   fluxes = read_csv(paste0('Processed_Output/',check_lakes$flux.name[loop],'_fluxes.csv'))
   hypsography = read_nml(paste0(check_lakes$folder.name[loop],'/config.nml'))
@@ -175,7 +416,7 @@ for (loop in 1:nrow(check_lakes)){
       obs <- obs[-which(obs$flago2 != ""), ]
     }
     
-
+    
     
     ggplot(obs %>% filter(sampledate >=  strat.date)) +
       geom_point(aes(sampledate, o2, col = as.factor(depth))) +
@@ -189,21 +430,21 @@ for (loop in 1:nrow(check_lakes)){
                                              'DOmass' = NA,
                                              'Area' = sim$area_hyp[match(as.Date(id.dates),as.Date(sim$datetime))]))
       } else {
-      if (any(is.na(df$o2))){
-        df <- df[-which(is.na(df$o2)),]
-      }
-      
-      do.values <- approx(df$depth, df$o2, seq(min(df$depth), max(df$depth), 1))$y
-      area.values <- approx(depths, areas, seq(min(df$depth), max(df$depth), 1))$y
-      
-      if (max(depths) < max(max(df$depth))){
-        area.values[which(seq(min(df$depth), max(df$depth), 1) > max(depths))] <- 1e-1
-      }
-      
-      mass.do <- rbind(mass.do, data.frame('datetime' = as.Date(id.dates),
-                                            'DOmass' = trapz(seq(min(df$depth), max(df$depth), 1),
-            area.values * do.values),
-            'Area' = sim$area_hyp[match(as.Date(id.dates),as.Date(sim$datetime))]))
+        if (any(is.na(df$o2))){
+          df <- df[-which(is.na(df$o2)),]
+        }
+        
+        do.values <- approx(df$depth, df$o2, seq(min(df$depth), max(df$depth), 1))$y
+        area.values <- approx(depths, areas, seq(min(df$depth), max(df$depth), 1))$y
+        
+        if (max(depths) < max(max(df$depth))){
+          area.values[which(seq(min(df$depth), max(df$depth), 1) > max(depths))] <- 1e-1
+        }
+        
+        mass.do <- rbind(mass.do, data.frame('datetime' = as.Date(id.dates),
+                                             'DOmass' = trapz(seq(min(df$depth), max(df$depth), 1),
+                                                              area.values * do.values),
+                                             'Area' = sim$area_hyp[match(as.Date(id.dates),as.Date(sim$datetime))]))
       }
       
     }
@@ -218,8 +459,8 @@ for (loop in 1:nrow(check_lakes)){
     id.end <- which(
       lubridate::yday(mass.do$datetime) >= lubridate::yday(strat.date)
     )[ which.min(mass.do$DOmass[which(
-       lubridate::yday(mass.do$datetime) >= lubridate::yday(strat.date)
-      )])]
+      lubridate::yday(mass.do$datetime) >= lubridate::yday(strat.date)
+    )])]
     if (mass.do$DOmass[id.start] < mass.do$DOmass[id.start + 1] && !is.na(mass.do$DOmass[id.start + 1])){
       for (k in id.start:(length(mass.do$datetime))){
         if (mass.do$DOmass[k] >= mass.do$DOmass[k+1] && !is.na(mass.do$DOmass[k]) && !is.na(mass.do$DOmass[k + 1])){
@@ -233,7 +474,7 @@ for (loop in 1:nrow(check_lakes)){
         lubridate::yday(mass.do$datetime) >= lubridate::yday(mass.do$datetime[id.start])
       )])]
     }
-
+    
     
     plot(mass.do$datetime[id.start:id.end], mass.do$DOmass[id.start:id.end]/mean(mass.do$Area[id.start:id.end]))
     
@@ -247,22 +488,22 @@ for (loop in 1:nrow(check_lakes)){
     
     if (!is.na(p) && p <= 0.05){
       df.AHOD <- rbind(df.AHOD, 
-                              data.frame('year' = id.year,
-                                         'AHOD' = AHOD,
-                                         'SED' = SED ,
-                                         'NEP' = NEP ,
-                                         'id' = lake.id))
+                       data.frame('year' = id.year,
+                                  'AHOD' = AHOD,
+                                  'SED' = SED ,
+                                  'NEP' = NEP ,
+                                  'id' = lake.id))
     } else {
       df.AHOD <- rbind(df.AHOD, 
-                              data.frame('year' = id.year,
-                                         'AHOD' = NA,
-                                         'SED' = SED ,
-                                         'NEP' = NEP ,
-                                         'id' = lake.id))
+                       data.frame('year' = id.year,
+                                  'AHOD' = NA,
+                                  'SED' = SED ,
+                                  'NEP' = NEP ,
+                                  'id' = lake.id))
     }
   }
 }
-   
+
 # coeff <- as.data.frame(coeff)
 # colnames(coeff) = c('year', 'Jv', 'Ja', 'NEP', 'SED')
 
@@ -281,5 +522,3 @@ ggplot(df.AHOD) +
 
 ggsave(file = paste0('Figures/fluxVerification.png'), g, dpi = 300, width =500, height = 900,
        units='mm')
-
-
