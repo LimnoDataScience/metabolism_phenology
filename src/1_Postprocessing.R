@@ -202,7 +202,8 @@ fit_clean <- fit_csv %>%
   mutate(name = strsplit(var, "\\[|\\]|,") %>% map_chr(~.x[1]),
          index = strsplit(var, "\\[|\\]|,") %>% map_int(~as.integer(.x[2])))
 
-outvars <- c("o2_epi","o2_hyp","fatm","fnep","fsed2","fmineral","fentr_epi","fentr_hyp","NEP_mgm3d","SED_mgm2d","MIN_mgm3d")
+# outvars <- c("o2_epi","o2_hyp","fatm","fnep","fsed2","fmineral","fentr_epi","fentr_hyp","NEP_mgm3d","SED_mgm2d","MIN_mgm3d")
+outvars <- c("o2_epi","o2_hyp","fatm","fnep","fsed2",'fsed_monod','fsed_first',"fmineral","fentr_epi","fentr_hyp","fdiffex","NEP_mgm3d","SED_mgm2d","MIN_mgm3d")
 
 dat <- fit_clean %>% filter(name %in% outvars) %>% 
   dplyr::select(mean,

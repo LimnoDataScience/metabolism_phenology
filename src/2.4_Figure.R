@@ -40,9 +40,9 @@ g1.north = ggplot(subset(m.cum.flux.slice, id == c('Allequash',
                                                    'Sparkling',
                                                    'Trout'))) +
   geom_line(aes(time, value/1000, color = variable, linetype = variable), size= 0.4) +
-  ylim(c(-8,10))+
+  ylim(c(-25,35))+
   facet_wrap(~id, ncol = 1) +
-  scale_linetype_manual(values = c(1,1,1,1,2))+
+  scale_linetype_manual(values = c(1,1,1,1,3))+
   ylab(expression("Cum. fluxes [kg DO"*~m^{-2}*""*"]")) +
   scale_color_brewer(palette="Set1") +
   theme.custom +
@@ -55,8 +55,8 @@ g1.south = ggplot(subset(m.cum.flux.slice, id %in% c('Fish',
                                                      'Monona'))) +
   geom_line(aes(time, value/1000, col = variable, linetype = variable), size = 0.4) +
   facet_wrap(~id, ncol = 1) +
-  ylim(c(-8,10))+
-  scale_linetype_manual(values = c(1,1,1,1,2)) +
+  ylim(c(-25,35))+
+  scale_linetype_manual(values = c(1,1,1,1,3)) +
   ylab(expression("Cum. fluxes [kg DO"*~m^{-2}*""*"]")) + # ylab(expression("Cum. fluxes [kg DO"*~m^{-2}*""*~d^{-1}*"]")) +
   scale_color_brewer(palette="Set1") +
   theme.custom +

@@ -43,12 +43,12 @@ g.conc <- ggplot(subset(mendota, year > 2002 & year < 2006)) +
   custom.theme; g.conc
 
 g.flux <- ggplot(subset(mendota, year > 2002 & year < 2006)) + 
-  geom_line(aes(x=datetime, y=fnep_middle, col = 'Fnep,epi')) +
-  geom_ribbon(aes(x=datetime, ymin=fnep_lower, ymax=fnep_upper, col = 'Fnep,epi'), linetype =2,alpha=0.2) +
-  geom_line(aes(x=datetime, y=fmineral_middle, col = 'Fnep,hypo')) +
-  geom_ribbon(aes(x=datetime, ymin=fmineral_lower, ymax=fmineral_upper, col = 'Fnep,hypo'), linetype =2, alpha=0.2) +
-  geom_line(aes(x=datetime, y=(-1)*fsed2_middle, col = 'Fsed')) +
-  geom_ribbon(aes(x=datetime, ymin=(-1)*fsed2_lower, ymax=(-1)*fsed2_upper, col = 'Fsed'), linetype =2,alpha=0.2) +
+  geom_line(aes(x=datetime, y=fnep_middle/1000, col = 'Fnep,epi')) +
+  geom_ribbon(aes(x=datetime, ymin=fnep_lower/1000, ymax=fnep_upper/1000, col = 'Fnep,epi'), linetype =2,alpha=0.2) +
+  geom_line(aes(x=datetime, y=fmineral_middle/1000, col = 'Fnep,hypo')) +
+  geom_ribbon(aes(x=datetime, ymin=fmineral_lower/1000, ymax=fmineral_upper/1000, col = 'Fnep,hypo'), linetype =2, alpha=0.2) +
+  geom_line(aes(x=datetime, y=(-1)*fsed2_middle/1000, col = 'Fsed')) +
+  geom_ribbon(aes(x=datetime, ymin=(-1)*fsed2_lower/1000, ymax=(-1)*fsed2_upper/1000, col = 'Fsed'), linetype =2,alpha=0.2) +
   # geom_line(aes(x=datetime, y=fatm_middle, col = 'Fatm')) +
   # geom_ribbon(aes(x=datetime, ymin=fatm_lower, ymax=fatm_upper, col = 'Fatm'), alpha=0.2) +
   ylab(expression("Sim. fluxes [g DO"*~m^{-3}*~d^{-1}*"]")) +
@@ -67,15 +67,15 @@ j.m$nMIN_min <- interpolate_nearest.neighbor(data = as.matrix(j.m$MIN_min, col =
 j.m$nSED_max <- interpolate_nearest.neighbor(data = as.matrix(j.m$SED_max, col = 1))
 j.m$nSED_min <- interpolate_nearest.neighbor(data = as.matrix(j.m$SED_min, col = 1))
 g.param <- ggplot(subset(j.m, year > 2002 & year < 2006)) + 
-  geom_line(aes(x=datetime, y=(nNEP), col ='Xnep,epi'),) +
-  geom_ribbon(aes(x=datetime, ymin=nNEP_min, ymax=nNEP_max, col = 'Xnep,epi'), linetype =2,alpha=0.2) +
+  geom_line(aes(x=datetime, y=(nNEP/1000), col ='Xnep,epi'),) +
+  geom_ribbon(aes(x=datetime, ymin=nNEP_min/1000, ymax=nNEP_max/1000, col = 'Xnep,epi'), linetype =2,alpha=0.2) +
   # geom_ribbon(aes(x=datetime, ymin=fnep_lower, ymax=fnep_upper), alpha=0.2) +
-  geom_line(aes(x=datetime, y=(nMIN), col ='Xnep,hypo')) +
-  geom_ribbon(aes(x=datetime, ymin=nMIN_min, ymax=nMIN_max, col = 'Xnep,hypo'), linetype =2,alpha=0.2) +
+  geom_line(aes(x=datetime, y=(nMIN)/1000, col ='Xnep,hypo')) +
+  geom_ribbon(aes(x=datetime, ymin=nMIN_min/1000, ymax=nMIN_max/1000, col = 'Xnep,hypo'), linetype =2,alpha=0.2) +
   ylab(expression("Xnep [g DO"*~m^{-3}*~d^{-1}*"]")) +
   # geom_ribbon(aes(x=datetime, ymin=fmineral_lower, ymax=fmineral_upper), alpha=0.2) +
-  geom_line(aes(x=datetime, y=(-1) * (nSED)/6, col = 'Xsed')) +
-  geom_ribbon(aes(x=datetime, ymin=-1 * nSED_min/6, ymax= -1 *nSED_max/6, col = 'Xsed'), linetype =2,alpha=0.2) +
+  geom_line(aes(x=datetime, y=(-1) * (nSED)/6/1000, col = 'Xsed')) +
+  geom_ribbon(aes(x=datetime, ymin=-1 * nSED_min/6/1000, ymax= -1 *nSED_max/6/1000, col = 'Xsed'), linetype =2,alpha=0.2) +
   scale_y_continuous(sec.axis = sec_axis(~.*6, name = 
                                            expression("Xsed [g DO"*~m^{-2}*~d^{-1}*"]"))       )+
   scale_color_manual(values = c("#E69F00", "#56B4E9", "#009E73")) +

@@ -119,7 +119,7 @@ for (i in 1:length(indMycl)){
 }
 
 df = as.data.frame(dataGroups)
-names(df) = c('Convex', 'Linear', 'Concave')#c('Anoxic','Convex','Hypoxic','Linear','Concave')
+names(df) = c('Linear', 'Concave', 'Convex')#c('Anoxic','Convex','Hypoxic','Linear','Concave')
 
 nameVec = names(df)
 df$depth = seq(1,nrow(df))
@@ -186,6 +186,12 @@ g <- (g.elb + g.sil)  / g.cluster / g1 + plot_layout(heights = c(1.5,1.5,2))  + 
 ggsave(file = 'Figures/Fig_S1.png', g, dpi = 500, width =8.1, height = 7)
 ggsave(file = 'Figures/Fig_S1.pdf', g, dpi = 600, width =8.1, height = 7)
 
+g <- g.cluster / g1 + plot_layout(heights = c(1.5,2))  + plot_annotation(tag_levels = 'A'); g
+# g <- g.cluster / g1 + plot_annotation(tag_levels = 'A') + plot_layout(heights = c(1.5,2)); g
+ggsave(file = 'Figures/Fig_7.png', g, dpi = 500, width =6, height = 4)
+ggsave(file = 'Figures/Fig_7.pdf', g, dpi = 600, width =6, height = 4)
+
+
 
 ## Cluster stratification duration boxplots
 # clust.strat.dur <- c()
@@ -200,3 +206,43 @@ ggsave(file = 'Figures/Fig_S1.pdf', g, dpi = 600, width =8.1, height = 7)
 # 
 # ggplot(clust.strat.dur, aes(x = cluster, y = stratdur)) +
 #   geom_boxplot()
+
+lake.list <- c('Allequash', 'BigMuskellunge', 'Crystal', 'Fish', 'Mendota',
+               'Monona', 'Sparkling', 'Trout')
+df = c()
+for (i in lake.list){
+  load(paste0(i,'/',i,'_mineral.Rda'))# load('Allequash/Allequash.Rda')
+  mindata = min(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
+  maxdata = max(which(!is.na(odem_stan$DO_obs_tot)),which(!is.na(odem_stan$DO_obs_epi)))
+  odem_stan = odem_stan[mindata:maxdata,]
+  data <- odem_stan
+  
+  dataStrat = data[which(data$strat == 1),]
+
+  stratdur = dataStrat %>%
+      group_by(year) %>%
+      summarise(length = max(doy) - min(doy),
+                start = min(doy), end = max(doy)) %>%
+      mutate(id = i) %>%
+      select(id, year, length, start, end)
+  
+  df = rbind(df, stratdur)
+    
+}
+
+
+g1 = ggplot(df) +
+  geom_boxplot(aes(x = as.factor(id), y = length)) + xlab('') + ylab('Duration (d)')
+
+
+g2 = ggplot(df) +
+  geom_boxplot(aes(x = as.factor(id), y = start)) + xlab('') + ylab('Start date (doy)')
+
+g3 = ggplot(df) +
+  geom_boxplot(aes(x = as.factor(id), y = end))  + xlab('') + ylab('End date (doy)')
+
+p = g1 /g2 / g3
+ggsave(file = 'Figures/StratificationLengths.png', p, dpi = 500, width =7, height = 6)
+
+ggplot(subset(df, (id) == 'BigMuskellunge'))+
+  geom_line(aes(year, length))

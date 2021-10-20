@@ -454,7 +454,7 @@ ggplot(coeff %>% filter(id == 'CR') ) +
     (plot.list[[15]] + plot.list[[16]]) +
    plot_layout(guides = 'collect') &
     theme(legend.position='bottom');g
-  ggsave(file = paste0('Figures/fluxVerification.png'), g, dpi = 300, width =500, height = 900,
+  ggsave(file = paste0('Figures/fluxVerification_Livingstone.png'), g, dpi = 300, width =500, height = 900,
          units='mm')
   
 

@@ -39,6 +39,13 @@ calc_nse <- function(mod_data, obs_data){
 lake.list <- c('Mendota')
 lake.list.Abr <- c('Mendota' = 'ME')
 
+
+# lake.list <- c('Allequash', 'BigMuskellunge', 'Crystal', 'Fish', 'Mendota',
+#                'Monona', 'Sparkling', 'Trout')
+# lake.list.Abr <- c('Allequash' = 'AL', 'BigMuskellunge' = 'BM', 'Crystal' = 'CR', 
+#                    'Fish' = 'FI', 'Mendota' = 'ME',
+                   # 'Monona' = 'MO', 'Sparkling' = 'SP', 'Trout' = 'TR')
+
 df.estimations <- list()
 all.sigma <- c()
 list.rhat <- list()
@@ -455,6 +462,26 @@ for (ii in 2:nrow(lake.odem)){
 
 lake.odem$fsed2_custom <- sed.flux * (-1)
 
+ggplot(lake.odem) + 
+  geom_line(aes(x=doy, y=fnep_middle/1000, col = 'Fnep,epi')) +
+  # geom_ribbon(aes(x=datetime, ymin=fnep_lower, ymax=fnep_upper, col = 'Fnep,epi'), linetype =2,alpha=0.2) +
+  geom_line(aes(x=doy, y=fmineral_middle/1000, col = 'Fnep,hypo')) +
+  # geom_ribbon(aes(x=datetime, ymin=fmineral_lower, ymax=fmineral_upper, col = 'Fnep,hypo'), linetype =2, alpha=0.2) +
+  geom_line(aes(x=doy, y=(-1)*fsed2_middle/1000, col = 'Fsed')) +
+  # geom_ribbon(aes(x=datetime, ymin=(-1)*fsed2_lower, ymax=(-1)*fsed2_upper, col = 'Fsed'), linetype =2,alpha=0.2) +
+  # geom_line(aes(x=datetime, y=fdiffex_middle/1000, col = 'Fdiff')) +
+  # geom_ribbon(aes(x=datetime, ymin=(-1)*fdiffex_lower, ymax=(-1)*fdiffex_upper, col = 'Fdiff'), linetype =2,alpha=0.2) +
+  geom_line(aes(x=doy, y=(-1)*fsed_monod_middle/1000, col = 'Fzero')) +
+  geom_line(aes(x=doy, y=(-1)*fsed_first_middle/1000, col = 'Ffirst')) +
+  # geom_line(aes(x=datetime, y=fatm_middle/1000, col = 'Fatm')) +
+  # geom_ribbon(aes(x=datetime, ymin=fatm_lower, ymax=fatm_upper, col = 'Fatm'), linetype =2, alpha=0.2) +
+  # geom_line(aes(x=datetime, y=Fentr1/1000  , col = 'Fentr')) +
+  # geom_line(aes(x=datetime, y=fsed2_custom, col = 'Fsed_custom')) +
+  ylab(expression("Sim. fluxes [g DO"*~m^{-3}*~d^{-1}*"]")) +
+  facet_wrap(~year)+
+  scale_color_manual(values = c("#E69F00", "#56B4E9", "#009E73", "magenta", 'lightblue', "green", 'cyan','purple')) +
+  # ggtitle(paste0(lake.id,'_RMSE:',rmse,'_NSE:',nse))+
+  custom.theme
 
 g.flux <- ggplot(lake.odem) + 
   geom_line(aes(x=datetime, y=fnep_middle/1000, col = 'Fnep,epi')) +
@@ -465,8 +492,8 @@ g.flux <- ggplot(lake.odem) +
   # geom_ribbon(aes(x=datetime, ymin=(-1)*fsed2_lower, ymax=(-1)*fsed2_upper, col = 'Fsed'), linetype =2,alpha=0.2) +
   geom_line(aes(x=datetime, y=fdiffex_middle/1000, col = 'Fdiff')) +
   # geom_ribbon(aes(x=datetime, ymin=(-1)*fdiffex_lower, ymax=(-1)*fdiffex_upper, col = 'Fdiff'), linetype =2,alpha=0.2) +
-  geom_line(aes(x=datetime, y=fsed_monod_middle/1000, col = 'Fzero')) +
-  geom_line(aes(x=datetime, y=fsed_first_middle/1000, col = 'Ffirst')) +
+  # geom_line(aes(x=datetime, y=fsed_monod_middle/1000, col = 'Fzero')) +
+  # geom_line(aes(x=datetime, y=fsed_first_middle/1000, col = 'Ffirst')) +
   geom_line(aes(x=datetime, y=fatm_middle/1000, col = 'Fatm')) +
   # geom_ribbon(aes(x=datetime, ymin=fatm_lower, ymax=fatm_upper, col = 'Fatm'), linetype =2, alpha=0.2) +
   geom_line(aes(x=datetime, y=Fentr1/1000  , col = 'Fentr')) +
@@ -488,6 +515,8 @@ plot(lake.odem$o2_hyp_middle, lake.odem$fsed_first_middle)
 
 
 g <-g.param /g.flux / g.conc + plot_annotation(tag_levels = 'A'); g
+
+
 # 
 # start = 0
 # end= 30
@@ -502,4 +531,7 @@ df = lake.odem %>% filter(stratified == 1)
 mean(df$fmineral_middle) - mean(df$fsed2_middle)
 (mean(df$fmineral_middle) - mean(df$fsed2_middle)) * mean(df$volume_hyp)/mean(df$area_hyp)
 (median(df$fmineral_middle) - median(df$fsed2_middle)) * median(df$volume_hyp)/median(df$area_hyp)
+mean(df$fmineral_middle)  * mean(df$volume_hyp)/mean(df$area_hyp)/1000
+mean(df$fsed2_middle) * mean(df$volume_hyp)/mean(df$area_hyp)/1000
 
+(sum(df$fmineral_middle) - sum(df$fsed2_middle)) * median(df$volume_hyp)/median(df$area_hyp)
