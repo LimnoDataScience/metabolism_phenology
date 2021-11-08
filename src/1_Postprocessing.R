@@ -339,6 +339,8 @@ cum.flux = list()
 cum.flux_max = list()
 cum.flux_min = list()
 odem.flux = list()
+odem.flux_min = list()
+odem.flux_max = list()
 total.flux= list()
 
 for (lake.id in lake.list){
@@ -529,6 +531,26 @@ for (lake.id in lake.list){
                                       'id' = lake.id,
                                       'lake' = lake.list.Abr[lake.id])[mindata:maxdata,]
   
+  odem.flux_max[[lake.id]] = data.frame(date = as.Date(odem_stan$datetime),
+                                    'Atm' = Fatm_max,
+                                    'Nep' = Fnep_max,
+                                    'Min' = Fmin_max,
+                                    'Sed' = Fsed_max,
+                                    'FnepTot' = Fnep_max + Fmin_max - Fsed_max,
+                                    'FAll' = Fatm_max + Fnep_max + Fmin_max + Fsed_max,
+                                    'id' = lake.id,
+                                    'lake' = lake.list.Abr[lake.id])[mindata:maxdata,]
+  
+  odem.flux_min[[lake.id]] = data.frame(date = as.Date(odem_stan$datetime),
+                                    'Atm' = Fatm_min,
+                                    'Nep' = Fnep_min,
+                                    'Min' = Fmin_min,
+                                    'Sed' = Fsed_min,
+                                    'FnepTot' = Fnep_min + Fmin_min - Fsed_min,
+                                    'FAll' = Fatm_min + Fnep_min + Fmin_min + Fsed_min,
+                                    'id' = lake.id,
+                                    'lake' = lake.list.Abr[lake.id])[mindata:maxdata,]
+  
   annual.flux[[lake.id]] = data.frame('year' = uYears[iYearsOnly],
                            'Atm' = yFatm[iYearsOnly],
                            'Nep' = yFnep[iYearsOnly],
@@ -578,9 +600,13 @@ cum.flux = bind_rows(cum.flux)
 cum.flux_max = bind_rows(cum.flux_max)
 cum.flux_min = bind_rows(cum.flux_min)
 odem.flux = bind_rows(odem.flux)
+odem.flux_min = bind_rows(odem.flux_min)
+odem.flux_max = bind_rows(odem.flux_max)
 total.flux= bind_rows(total.flux)
 
 write_csv(odem.flux, 'Processed_Output/Fluxes_dailyFluxes.csv')
+write_csv(odem.flux_min, 'Processed_Output/Fluxes_dailyFluxes_min.csv')
+write_csv(odem.flux_max, 'Processed_Output/Fluxes_dailyFluxes_max.csv')
 write_csv(cum.flux, 'Processed_Output/Fluxes_cumFlux.csv')
 write_csv(cum.flux_min, 'Processed_Output/Fluxes_cumFluxmin.csv')
 write_csv(cum.flux_max, 'Processed_Output/Fluxes_cumFluxmax.csv')

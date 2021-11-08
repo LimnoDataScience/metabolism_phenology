@@ -119,7 +119,7 @@ for (i in 1:length(indMycl)){
 }
 
 df = as.data.frame(dataGroups)
-names(df) = c('Linear', 'Concave', 'Convex')#c('Anoxic','Convex','Hypoxic','Linear','Concave')
+names(df) = c('Convex', 'Linear', 'Concave')#c('Anoxic','Convex','Hypoxic','Linear','Concave')
 
 nameVec = names(df)
 df$depth = seq(1,nrow(df))

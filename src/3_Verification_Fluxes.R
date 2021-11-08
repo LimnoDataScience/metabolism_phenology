@@ -40,10 +40,13 @@ df.fluxes <- data.frame('NEP_epi' = c(allequash$Fnep, bigmuskellunge$Fnep, cryst
 df.fluxes <- reshape2::melt(df.fluxes, id = 'lakeid')
 g.param <- ggplot(df.fluxes) +
   geom_boxplot(aes(x = lakeid, y = value)) +
-  facet_wrap(~ variable) +
+  facet_wrap(~ variable,scales = 'free') +
+  xlab('') +
   # ylab('Idealized Fluxes: NEP in mg/m3/d; SED ing mg/m2/d')+
   ylab(expression(atop("Idealized flux parameters", paste("NEP in mg/m3/d, SED ing mg/m2/d")))) +
-  theme_minimal()
+  theme_minimal() +theme(legend.text = element_text(size = 11), axis.text.x= element_text(size = 20), plot.title = element_text(size = 20),
+                         axis.text.y= element_text(size = 20), text = element_text(size = 20), legend.title = element_blank(), strip.text =element_text(size = 20),
+                         legend.position = 'bottom')
 
 ## Check Livingstone for southern lakes
 ## packages
@@ -64,6 +67,7 @@ df.livingstone = data.frame('year' = NULL,
                             'NEP' = NULL,
                             'SED' = NULL,
                             'SEDmgm3' = NULL,
+                            'SED_wo'  = NULL,
                             'id' = NULL)
 coeff = data.frame('year' = NULL, 
                    'Jz' = NULL,
@@ -72,11 +76,12 @@ coeff = data.frame('year' = NULL,
                    'NEP' = NULL,
                    'SED' = NULL,
                    'SEDmgm3' =NULL,
+                   'SED_wo' = NULL,
                    'id' = NULL)
 
 lks <- list.dirs(path = 'Driver_Data/extdata/', full.names = TRUE, recursive = F)
 
-for (ii in lks){
+for (ii in lks[1:3]){
   print(paste0('Running ',ii))
   data <- read.csv(paste0(ii,'/', list.files(ii, pattern = 'pball', include.dirs = T)))
   meteo <- read.csv(paste0(ii,'/', list.files(ii, pattern = 'NLDAS', include.dirs = T)))
@@ -241,13 +246,15 @@ for (ii in lks){
         
         sim$Fsed_corr <- NA
         sim$Fsed_corrmgm3 = NA
+        sim$Fsed_corr_wo = NA
         for (p in 2:nrow(sim)){
           sim$Fsed_corr[p] <- sim$Fsed[p]  * max(sim$volume_hyp[p-1]/(sim$area_hyp[p-1]),1) -
             sim$Fentr2[p] * max(sim$volume_hyp[p-1]/(sim$area_hyp[p-1]),1)  -
             sim$fdiffex_middle[p] * max(sim$volume_hyp[p-1]/(sim$area_hyp[p-1]),1)
-          sim$Fsed_corrmgm3[p] <- sim$Fsed[p]-
+          sim$Fsed_corrmgm3[p] <- sim$Fsed[p] -
             sim$Fentr2[p]   -
             sim$fdiffex_middle[p]
+          sim$Fsed_corr_wo[p] <- sim$Fsed[p]  * max(sim$volume_hyp[p-1]/(sim$area_hyp[p-1]),1) 
         }
         
         if (!is.na(id.end)){
@@ -255,18 +262,19 @@ for (ii in lks){
             NEP <- mean(sim$Fmineral[match(as.Date(obs.z$ActivityStartDate[id.start]),as.Date(sim$datetime)) : match(as.Date(id.end),as.Date(sim$datetime))])
             SED <- mean(sim$Fsed_corr[match(as.Date(obs.z$ActivityStartDate[id.start]),as.Date(sim$datetime)) : match(as.Date(id.end),as.Date(sim$datetime))])
             SEDmgm3 <- mean(sim$Fsed_corrmgm3[match(as.Date(obs.z$ActivityStartDate[id.start]),as.Date(sim$datetime)) : match(as.Date(id.end),as.Date(sim$datetime))])
-            
+            SED_wo <- mean(sim$Fsed_corr_wo[match(as.Date(obs.z$ActivityStartDate[id.start]),as.Date(sim$datetime)) : match(as.Date(id.end),as.Date(sim$datetime))])
           } else {
             NEP <- mean(sim$Fmineral[match(as.Date(obs.z$ActivityStartDate[id.start]),as.Date(sim$datetime)) : match(id.end,as.Date(sim$datetime))])
             SED <- mean(sim$Fsed_corr[match(as.Date(obs.z$ActivityStartDate[id.start]),as.Date(sim$datetime)) : match(id.end,as.Date(sim$datetime))])
             SEDmgm3 <- mean(sim$Fsed_corrmgm3[match(as.Date(obs.z$ActivityStartDate[id.start]),as.Date(sim$datetime)) : match(id.end,as.Date(sim$datetime))])
-            
+            SED_wo <- mean(sim$Fsed_corr_wo[match(as.Date(obs.z$ActivityStartDate[id.start]),as.Date(sim$datetime)) : match(id.end,as.Date(sim$datetime))])
           }
           
         } else {
           NEP = NA
           SED = NA
           SEDmgm3 = NA
+          SED_wo = NA
         }
         if (id.z == max(depths)){
           id.z = id.z-0.1
@@ -279,6 +287,7 @@ for (ii in lks){
                                            'NEP' = NEP / 1000,
                                            'SED' = SED / 1000,
                                            'SEDmgm3' = SEDmgm3 / 1000,
+                                           'SED_wo' = SED_wo / 1000,
                                            'id' = lake.id))
       }
         }
@@ -304,6 +313,7 @@ for (ii in na.omit(unique(df.livingstone$year))){
                                 'NEP' = (mean(df.livingstone$NEP[idx], na.rm = T)),
                                 'SED' = mean(df.livingstone$SED[idx], na.rm = T),
                                 'SEDmgm3' =  mean(df.livingstone$SEDmgm3[idx], na.rm = T),
+                                'SED_wo' = mean(df.livingstone$SED_wo[idx], na.rm = T),
                                 'id' = lake.id))
   
     } else {
@@ -320,6 +330,7 @@ for (ii in na.omit(unique(df.livingstone$year))){
                                     'NEP' = (mean(df.livingstone$NEP[idx], na.rm = T)),
                                     'SED' = mean(df.livingstone$SED[idx], na.rm = T),
                                     'SEDmgm3' = mean(df.livingstone$SEDmgm3[idx], na.rm = T),
+                                    'SED_wo' = mean(df.livingstone$SED_wo[idx], na.rm = T),
                                     'id' = lake.id))
           
         } else {
@@ -331,6 +342,7 @@ for (ii in na.omit(unique(df.livingstone$year))){
                                     'NEP' = (mean(df.livingstone$NEP[idx], na.rm = T)),
                                     'SED' = mean(df.livingstone$SED[idx], na.rm = T),
                                     'SEDmgm3' = mean(df.livingstone$SEDmgm3[idx], na.rm = T),
+                                    'SED_wo' = mean(df.livingstone$SED_wo[idx], na.rm = T),
                                     'id' = lake.id))
           
         }
@@ -343,6 +355,7 @@ for (ii in na.omit(unique(df.livingstone$year))){
                                   'NEP' = (mean(df.livingstone$NEP[idx], na.rm = T)),
                                   'SED' = mean(df.livingstone$SED[idx], na.rm = T),
                                   'SEDmgm3' = mean(df.livingstone$SEDmgm3[idx], na.rm = T),
+                                  'SED_wo' = mean(df.livingstone$SED_wo[idx], na.rm = T),
                                   'id' = lake.id))
         
       }
@@ -363,42 +376,62 @@ ggplot(df.livingstone ) +
 g1 <-ggplot(coeff ) +
   geom_density(aes(Jv, fill = 'Livingstone'), alpha = 0.1) +
   geom_density(aes((-1)*NEP,  fill = 'Metabolism'), alpha = 0.1) +
-  ggtitle('Volumetric DO depletion') +
+  ggtitle('Volumetric DO consumption') +
   facet_wrap(~ id, ncol=1, scales = 'free')+
-  xlab(expression(atop("Jv (Livingstone) against", paste("average hypolimnetic NEP (g/m3/d)")))) +
+  xlab(expression(atop("Jv (Livingstone) against", paste("average hypo. NEP (g/m3/d)")))) +
   ylab('Density')+
   # xlab('')+
-  theme_bw()
+  theme_bw() +
+  theme(legend.text = element_text(size = 11), axis.text.x= element_text(size = 20), plot.title = element_text(size = 20),
+        axis.text.y= element_text(size = 20), text = element_text(size = 20), legend.title = element_blank(), strip.text =element_text(size = 20))
 
 g2 <- ggplot(coeff ) +
   geom_density(aes(Ja, fill = 'Livingstone'), alpha = 0.1) +
   geom_density(aes(SED,  fill = 'Metabolism'), alpha = 0.1) +
-  ggtitle('Areal DO depletion') +
+  ggtitle('Areal DO consumption') +
   facet_wrap(~ id, ncol = 1, scales = 'free')+
-  xlab(expression(atop("Ja (Livingstone) against", paste("average hypolimnetic SED+ENTR+DIFF (g/m3/d)")))) +
+  xlab(expression(atop("Ja (Livingstone) against", paste("average hypo. SED+ENTR+DIFF (g/m2/d)")))) +
   ylab('Density')+
   # xlab('Ja (Livingstone) against average hypolimnetic SED (g/m2/d)')+
-  theme_bw()
+  theme_bw()+
+  theme(legend.text = element_text(size = 11), axis.text.x= element_text(size = 20), plot.title = element_text(size = 20),
+        axis.text.y= element_text(size = 20), text = element_text(size = 20), legend.title = element_blank(), strip.text =element_text(size = 20))
+
+g4 <- ggplot(coeff ) +
+  geom_density(aes(Ja, fill = 'Livingstone'), alpha = 0.1) +
+  geom_density(aes(SED_wo,  fill = 'Metabolism'), alpha = 0.1) +
+  ggtitle('Areal DO consumption') +
+  facet_wrap(~ id, ncol = 1, scales = 'free')+
+  xlab(expression(atop("Ja (Livingstone) against", paste("average hypo. SED (g/m2/d)")))) +
+  ylab('Density')+
+  # xlab('Ja (Livingstone) against average hypolimnetic SED (g/m2/d)')+
+  theme_bw()+
+  theme(legend.text = element_text(size = 11), axis.text.x= element_text(size = 20), plot.title = element_text(size = 20),
+        axis.text.y= element_text(size = 20), text = element_text(size = 20), legend.title = element_blank(), strip.text =element_text(size = 20))
 
 
 g3 <-ggplot(coeff ) +
   geom_density(aes(Jz, fill = 'Livingstone'), alpha = 0.1) +
   geom_density(aes((-1) * NEP + SEDmgm3,  fill = 'Metabolism'), alpha = 0.1) +
-  ggtitle('Total average DO depletion') +
+  ggtitle('Total average DO consumption') +
   facet_wrap(~ id, ncol =1, scales = 'free')+
-  xlab(expression(atop("Jz (Livingstone) against", paste("average hypolimnetic consumption (g/m3/d)")))) +
+  xlab(expression(atop("Jz (Livingstone) against", paste("average hypo. consumption (g/m3/d)")))) +
   ylab('Density')+
   # xlab('average Jz (Livingstone) against average hypolimnetic consumption (g/m3/d)')+
-  theme_bw()
+  theme_bw()+
+  theme(legend.text = element_text(size = 11), axis.text.x= element_text(size = 20), plot.title = element_text(size = 20),
+        axis.text.y= element_text(size = 20), text = element_text(size = 20), legend.title = element_blank(), strip.text =element_text(size = 20))
 
 
-g.living <- g1 | g2    | g3 +  plot_layout(guides = 'collect')
-ggsave(file = paste0('Figures/southernLakes_livingstone.png'), g, dpi = 300, width =300, height = 200,
+
+g.living <- g1 | g4 | 
+  g2    | g3 +  plot_layout(guides = 'collect')
+ggsave(file = paste0('Figures/southernLakes_livingstone.png'), g.living, dpi = 300, width =300, height = 200,
                 units='mm')
 
 library(patchwork)
 
-setwd('/home/robert/Projects/DSI/metabolism_phenology/')
+# setwd('/home/robert/Projects/DSI/metabolism_phenology/')
 
 
 # Package ID: knb-lter-ntl.112.6 Cataloging System:https://pasta.lternet.edu.
@@ -587,7 +620,9 @@ tr.df = read_csv(paste0('Processed_Output/trout_fluxes.csv'))
 model.df = data.frame('NEP_epi' = c(cr.df$fnep_middle, sp.df$fnep_middle, tr.df$fnep_middle),
                       'NEP_hypo' = c(cr.df$fmineral_middle, sp.df$fmineral_middle, tr.df$fmineral_middle),
                       'lakeid' = c(rep('CR', nrow(cr.df)), rep('SP', nrow(sp.df)), rep('TR', nrow(tr.df))),
-                      'datetime' = as.Date(c(cr.df$datetime, sp.df$datetime, tr.df$datetime)))
+                      'datetime' = as.Date(c(cr.df$datetime, sp.df$datetime, tr.df$datetime)),
+                      'Total_NEP_epi' = c(cr.df$fnep_middle, sp.df$fnep_middle, tr.df$fnep_middle),
+                      'Total_NEP_hypo' = c(cr.df$fmineral_middle-cr.df$fsed2_middle, sp.df$fmineral_middle-sp.df$fsed2_middle, tr.df$fmineral_middle-tr.df$fsed2_middle))
 
 g1 <- ggplot(df) +
   geom_point(aes(sampledate, pp_epi_hw_m3 * 44/12 * 32/44 * 1/1000 * 24, col = '14C')) +
@@ -636,26 +671,57 @@ ggsave(file = paste0('Figures/northernLakes_C14.png'), g, dpi = 300, width =300,
 
 
 p1 <- ggplot(df) +
-  geom_boxplot(aes(x = '14C', pp_epi_hw_m3 * 44/12 * 32/44 * 1/1000 * 24*1.27, fill = '14C'), alpha = 0.1) +
+  geom_boxplot(aes(x = '14C', pp_epi_hw_m3 * 44/12 * 32/44 * 1/1000 * 24*1.25, fill = '14C'), alpha = 0.1) +
   geom_boxplot(data = model.df, aes(x = 'Metabolism', NEP_epi/1000,  fill = 'Metabolism'), alpha = 0.1) +
   ylab('Production in g O2 per m3 per day') +xlab('')+
   ggtitle('Epilimnion')+
   ylim(0,2) +
-  facet_wrap(~lakeid, ncol=1, scales = 'free')+ theme_minimal()
+  facet_wrap(~lakeid, ncol=1, scales = 'free')+ theme_minimal()+
+  theme(legend.text = element_text(size = 11), axis.text.x= element_text(size = 20), plot.title = element_text(size = 20),
+        axis.text.y= element_text(size = 20), text = element_text(size = 20), legend.title = element_blank(), strip.text =element_text(size = 20))
+
 p2 <- ggplot(df) +
-  geom_boxplot(aes(x = '14C', pp_hyp_hw_m3  * 44/12 * 32/44  * 1/1000 * 24 *1.27, fill = '14C'), alpha = 0.1) +
+  geom_boxplot(aes(x = '14C', pp_hyp_hw_m3  * 44/12 * 32/44  * 1/1000 * 24 *1.25, fill = '14C'), alpha = 0.1) +
   geom_boxplot(data = model.df, aes(x = 'Metabolism', NEP_hypo/1000,  fill = 'Metabolism'), alpha = 0.1) +
   ylab('Production in g O2 per m3 per day') +xlab('')+
   ggtitle('Hypolimnion')+
   # ylim(0,130) +
-  facet_wrap(~lakeid, ncol=1, scales = 'free')+ theme_minimal()
+  facet_wrap(~lakeid, ncol=1, scales = 'free')+ theme_minimal()+
+  theme(legend.text = element_text(size = 11), axis.text.x= element_text(size = 20), plot.title = element_text(size = 20),
+        axis.text.y= element_text(size = 20), text = element_text(size = 20), legend.title = element_blank(), strip.text =element_text(size = 20))
+
 p3 <- ggplot(df) +
-  geom_boxplot(aes(x = '14C', (pp_hyp_hw_m3 + pp_met_hw_m3)  * 44/12 * 32/44  * 1/1000 * 24 * 1.27, fill = '14C'), alpha = 0.1) +
+  geom_boxplot(aes(x = '14C', (pp_hyp_hw_m3 + pp_met_hw_m3)  * 44/12 * 32/44  * 1/1000 * 24 * 1.25, fill = '14C'), alpha = 0.1) +
   geom_boxplot(data = model.df, aes(x = 'Metabolism', NEP_hypo/1000,  fill = 'Metabolism'), alpha = 0.1) +
-  ylab('Production in g O2 per m3 per day') + xlab('')+
+  ylab('Production in g O2 per m3 per day') + xlab('')+ylim(0,1) +
   ggtitle('Metalimnion + Hypolimnion')+
   # ylim(0,130) +
-  facet_wrap(~lakeid, ncol=1, scales = 'free')+ theme_minimal()
+  facet_wrap(~lakeid, ncol=1, scales = 'free')+ theme_minimal() + 
+  theme(legend.text = element_text(size = 11), axis.text.x= element_text(size = 20), plot.title = element_text(size = 20),
+        axis.text.y= element_text(size = 20), text = element_text(size = 20), legend.title = element_blank(), strip.text =element_text(size = 20))
+
+p4 <- ggplot(df) +
+  geom_boxplot(aes(x = '14C', pp_hyp_hw_m3  * 44/12 * 32/44  * 1/1000 * 24 *1.27, fill = '14C'), alpha = 0.1) +
+  geom_boxplot(data = model.df, aes(x = 'Metabolism', Total_NEP_hypo/1000,  fill = 'Metabolism'), alpha = 0.1) +
+  ylab('Production in g O2 per m3 per day') +xlab('')+
+  ggtitle('Hypolimnion')+
+  ylim(-0.1, 0.5) +
+  # ylim(0,130) +
+  facet_wrap(~lakeid, ncol=1, scales = 'free')+ theme_minimal()+
+  theme(legend.text = element_text(size = 11), axis.text.x= element_text(size = 20), plot.title = element_text(size = 20),
+        axis.text.y= element_text(size = 20), text = element_text(size = 20), legend.title = element_blank(), strip.text =element_text(size = 20))
+
+
+p4p5 <- ggplot(df) +
+  geom_boxplot(aes(x = '14C', (pp_hyp_hw_m3 + pp_met_hw_m3)  * 44/12 * 32/44  * 1/1000 * 24 * 1.27, fill = '14C'), alpha = 0.1) +
+  geom_boxplot(data = model.df, aes(x = 'Metabolism', Total_NEP_hypo/1000,  fill = 'Metabolism'), alpha = 0.1) +
+  ylab('Production in g O2 per m3 per day') + xlab('')+ylim(0,1) +
+  ggtitle('Metalimnion + Hypolimnion')+
+  # ylim(0,130) +
+  facet_wrap(~lakeid, ncol=1, scales = 'free')+ theme_minimal() + 
+  theme(legend.text = element_text(size = 11), axis.text.x= element_text(size = 20), plot.title = element_text(size = 20),
+        axis.text.y= element_text(size = 20), text = element_text(size = 20), legend.title = element_blank(), strip.text =element_text(size = 20))
+
 
 p <- p1 | p2    | p3 +  plot_layout(guides = 'collect'); p
 ggsave(file = paste0('Figures/northernLakes_C14_boxplots.png'), p, dpi = 300, width =300, height = 200,
@@ -663,7 +729,7 @@ ggsave(file = paste0('Figures/northernLakes_C14_boxplots.png'), p, dpi = 300, wi
 
 
 
-v <- g.param / g.living / p + plot_annotation(tag_levels = 'A') +plot_layout(guides = 'collect');g
+v <- g.param / g.living / p + plot_annotation(tag_levels = 'A') ;v
 
-ggsave(file = 'Figures/Fig_8.png', v, dpi = 700, width = 11.5, height = 15.5, units='in')
-ggsave(file = 'Figures/Fig_8.pdf', v, dpi = 600, width = 11.5, height = 15.5, units='in')
+ggsave(file = 'Figures/Fig_8.png', v, dpi = 600, width = 22.5, height = 20.5, units='in')
+ggsave(file = 'Figures/Fig_8.pdf', v, dpi = 600, width = 22.5, height = 20.5, units='in')

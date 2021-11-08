@@ -35,7 +35,32 @@ do.decompose <- function(df) {
 #   rename(id = name, lake = lakeid)
 
 fluxes = read_csv('Processed_Output/Fluxes_dailyFluxes.csv')
+fluxes_max = read_csv('Processed_Output/Fluxes_dailyFluxes_max.csv')
+fluxes_min = read_csv('Processed_Output/Fluxes_dailyFluxes_min.csv')
+
 flux.nepTot = fluxes %>% 
+  select(id, lake, date, FnepTot) %>% 
+  left_join(do.decompose(.))  %>% 
+  mutate(month = month(date), year = year(date), date = as.Date(date)) %>% 
+  group_by(id, lake, year, month) %>% 
+  # summarise(FnepTot = mean(.trend), date = first(date)) %>% 
+  # mutate_if(is.numeric, scale2) %>% #scale data
+  ungroup() %>% 
+  mutate(lake = factor(lake, levels = c('AL','BM', 'CR', 'SP', 'TR','FI','ME','MO'))) %>%
+  mutate(region = as.factor(if_else(lake %in% c('BM', 'TR', 'CR', 'SP', 'AL', 'N','S'), 'North','South')))
+
+flux.nepTot_max = fluxes_max %>% 
+  select(id, lake, date, FnepTot) %>% 
+  left_join(do.decompose(.))  %>% 
+  mutate(month = month(date), year = year(date), date = as.Date(date)) %>% 
+  group_by(id, lake, year, month) %>% 
+  # summarise(FnepTot = mean(.trend), date = first(date)) %>% 
+  # mutate_if(is.numeric, scale2) %>% #scale data
+  ungroup() %>% 
+  mutate(lake = factor(lake, levels = c('AL','BM', 'CR', 'SP', 'TR','FI','ME','MO'))) %>%
+  mutate(region = as.factor(if_else(lake %in% c('BM', 'TR', 'CR', 'SP', 'AL', 'N','S'), 'North','South')))
+
+flux.nepTot_min = fluxes_min %>% 
   select(id, lake, date, FnepTot) %>% 
   left_join(do.decompose(.))  %>% 
   mutate(month = month(date), year = year(date), date = as.Date(date)) %>% 
@@ -50,8 +75,12 @@ flux.nepTot = fluxes %>%
 # Plot Trend of NEP fluxes 
 p1 = ggplot(flux.nepTot) +
   geom_path(aes(x = date, y = .trend, col = lake), size = 0.5) +
+  geom_path(data = flux.nepTot_max, aes(x = date, y = .trend, col = lake), size = 0.5, 
+            linetype = 'dotted') +
+  geom_path(data = flux.nepTot_min, aes(x = date, y = .trend, col = lake), size = 0.5, 
+            linetype = 'dotted') +
   scale_color_brewer(palette="Dark2", name = 'Lake') +
-  facet_wrap(~region, nrow = 2) +
+  facet_wrap(~region, nrow = 2, scales = 'free_y') +
   theme_bw(base_size = 8) +
   ylab(expression("Trend signal total NEP flux [g DO"*~m^{-2}*~d^{-1}*"]")) +
   theme(axis.title.x = element_blank(), 
