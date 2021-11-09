@@ -424,8 +424,8 @@ g3 <-ggplot(coeff ) +
 
 
 
-g.living <- g1 | g4 | 
-  g2    | g3 +  plot_layout(guides = 'collect')
+g.living <- g1 + g4 + g2 + g3 +  plot_layout(nrow = 1, guides = 'collect')
+g.living
 ggsave(file = paste0('Figures/southernLakes_livingstone.png'), g.living, dpi = 300, width =300, height = 200,
                 units='mm')
 
@@ -665,7 +665,7 @@ g4 <- ggplot(df) +
   # ylim(0,130) +
   facet_wrap(~lakeid, ncol=1) + theme_minimal()
 
-g <-g1 | g3 | g4+  plot_layout(guides = 'collect'); g
+g <-g1 + g3 +  g4 +  plot_layout(nrow = 1, guides = 'collect'); g
 ggsave(file = paste0('Figures/northernLakes_C14.png'), g, dpi = 300, width =300, height = 200,
        units='mm')
 
@@ -723,7 +723,7 @@ p4p5 <- ggplot(df) +
         axis.text.y= element_text(size = 20), text = element_text(size = 20), legend.title = element_blank(), strip.text =element_text(size = 20))
 
 
-p <- p1 | p2    | p3 +  plot_layout(guides = 'collect'); p
+p <- p1 + p2 + p3 + plot_layout(nrow = 1, guides = 'collect'); p
 ggsave(file = paste0('Figures/northernLakes_C14_boxplots.png'), p, dpi = 300, width =300, height = 200,
        units='mm')
 
