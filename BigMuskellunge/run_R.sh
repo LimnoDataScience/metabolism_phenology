@@ -15,7 +15,7 @@ tar -xzf R361.tar.gz
 # (optional) if you have a set of packages (created in Part 1), untar them also
 tar -xzf rstan.tar.gz
 
-# make sure the script will use your R installation, 
+# make sure the script will use your R installation,
 # and the working directory as its home location
 export R_MAKEVARS_USER=$PWD/.R/Makevars
 export PATH=$PWD/R/bin:$PATH
@@ -23,5 +23,5 @@ export RHOME=$PWD/R
 export R_LIBS=$PWD/rstan
 
 # run your script
-Rscript run_odem_chtc_latest.R
+Rscript run_odem_chtc_sed.R
 #mpirun -np 8 ./my_script.R

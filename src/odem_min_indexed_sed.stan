@@ -37,7 +37,7 @@ data {
   real nep_lim; // limits for NEP (mg/m3/d)
   real sed_lim; // upper limit for sediment oxygen demand (mg/m2/d)
   real<lower=0> smooth_sigma;
-  real diff_mol;
+  real diff_mol[d];
   real z_dbl;
   real diff_eddy[d];
 }
@@ -97,7 +97,7 @@ parameters {
   real diffex0; // initial eddy diffusivity
   real<lower = -neplim,upper=neplim> NEP[n_ParamEst]; // NEP at reference temperature
   real<lower=0,upper=sedlim> SED2[n_ParamEst]; //sediment oxygen demand at reference temperature
-  real<lower=-neplim,upper=0> MIN[n_ParamEst]; //sediment oxygen demand at reference temperature
+  real<lower=-neplim,upper=neplim> MIN[n_ParamEst]; //sediment oxygen demand at reference temperature
 }
 
 transformed parameters {
@@ -142,10 +142,11 @@ transformed parameters {
         nep[i] = NEP[i_Param[i]] * theta0[i-1];
         mineral[i] = MIN[i_Param[i]] * theta0[i-1];
 	      //sed2[i] = SED2[i_Param[i]] *  (fmax((DO_tot[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_tot[i-1]*tau+mu),1e-06))) * theta0[i-1] / mean_depth + DO_tot[i-1] * diff_mol/z_dbl * theta0[i-1] / mean_depth;
-        sed_monod[i] = (fmax((DO_tot[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_tot[i-1]*tau+mu),1e-06)) * SED2[i_Param[i]] *  theta0[i-1] )/ mean_depth; //fmax(fmax((DO_tot[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_tot[i-1]*tau+mu),1e-06)),1e-06) *
+        sed_monod[i] = (SED2[i_Param[i]] *  theta0[i-1] )/ mean_depth; //fmax(fmax((DO_tot[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_tot[i-1]*tau+mu),1e-06)),1e-06) *
+        // fmax((DO_tot[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_tot[i-1]*tau+mu),1e-06))
         // sed_first[i] = fmax(fmax((DO_tot[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_tot[i-1]*tau+mu),1e-06)),1e-06) * (fmax((DO_tot[i-1]*tau + mu),1e-06) * diff_mol/z_dbl * theta0[i-1]) / fmax((volume_tot[i-1]/area_epi[i-1]),1);
-        sed_first[i] = ((fmax((DO_tot[i-1]*tau + mu),1e-06) * diff_mol/(z_dbl * max_depth) * theta0[i-1]))/tau;
-        sed2[i] =   sed_monod[i] + sed_first[i];
+        sed_first[i] = ((fmax((DO_tot[i-1]*tau + mu),1e-06) * diff_mol[i-1]/(z_dbl * max_depth) * theta0[i-1]))/tau;
+        sed2[i] = sed_monod[i] +  sed_first[i];
         nu[i] =  k600t[i-1]  *  (x_eqt[i-1] - DO_epi[i-1]) / mean_depth;
         diffex[i] = 1e-09;
         DO_tot[i] =  DO_tot[i-1] + nep[i] + mineral[i] - sed2[i] + nu[i];
@@ -181,10 +182,11 @@ transformed parameters {
     	} else {
     	 mineral[i] = MIN[i_Param[i]] * theta2[i-1];
 	     //sed2[i] = (SED2[i_Param[i]] *  (fmax((DO_hyp[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_hyp[i-1]*tau+mu),1e-06))) * theta2[i-1]) / fmax((volume_hyp[i-1]/area_hyp[i-1]),1) + (DO_hyp[i-1] * diff_mol/z_dbl* theta2[i-1]) / fmax((volume_hyp[i-1]/area_hyp[i-1]),1);
-       sed_monod[i] = (fmax((DO_hyp[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_hyp[i-1]*tau+mu),1e-06)) * SED2[i_Param[i]] *  theta2[i-1]) / fmax((volume_hyp[i-1]/area_hyp[i-1]),1);// fmax(fmax((DO_hyp[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_hyp[i-1]*tau+mu),1e-06)),1e-06) *
+       sed_monod[i] = (SED2[i_Param[i]] *  theta2[i-1]) / fmax((volume_hyp[i-1]/area_hyp[i-1]),1);// fmax(fmax((DO_hyp[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_hyp[i-1]*tau+mu),1e-06)),1e-06) *
+       // fmax((DO_hyp[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_hyp[i-1]*tau+mu),1e-06))
        // sed_first[i] =fmax(fmax((DO_hyp[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_hyp[i-1]*tau+mu),1e-06)),1e-06) *  (fmax((DO_hyp[i-1]*tau + mu),1e-06) * diff_mol/z_dbl* theta2[i-1]) / fmax((volume_hyp[i-1]/area_hyp[i-1]),1);
-       sed_first[i] =  ((fmax((DO_hyp[i-1]*tau + mu),1e-06) * diff_mol/(fmax((volume_hyp[i-1]/area_hyp[i-1]),1)*z_dbl) * theta2[i-1]) ) /tau;
-       sed2[i] = sed_monod[i] + sed_first[i];
+       sed_first[i] =  ((fmax((DO_hyp[i-1]*tau + mu),1e-06) * diff_mol[i-1]/(fmax((volume_hyp[i-1]/area_hyp[i-1]),1)*z_dbl) * theta2[i-1]) ) /tau;
+       sed2[i] = sed_monod[i] +  sed_first[i];
        // DO_hyp[i] =  ((DO_hyp[i-1] - fmin(sed2[i] + diffex[i], DO_hyp[i-1]))*volume_hyp[i-1] - (delvol[i]*x_do1))/volume_hyp[i];
        DO_hyp[i] =  ((DO_hyp[i-1] + mineral[i] - sed2[i] - diffex[i])*volume_hyp[i-1] - (delvol[i]*x_do1))/volume_hyp[i];
     	}

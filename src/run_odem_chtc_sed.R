@@ -1,13 +1,12 @@
 cat('\f')
 rm(list= ls())
 
-setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 
 library(tidyverse)
 
 #oneyear <- 2008
 #twoyear <- 2007:2008
-fiveyear <- 1979:1995
+fiveyear <- 1979:2019
 # max.d = 8 # lake max depth
 
 get_dens <- function(temp, salt){
@@ -167,7 +166,7 @@ dummyinput <- list(
   airtemp = in1yr$airtemp,
   delvol_epi = c(diff(in1yr$volume_epi),0)/c(in1yr$volume_epi),
   delvol_hyp =  c(diff(in1yr$volume_hypo),0)/c(in1yr$volume_hypo),
-  diff_mol = 1.08 *10e-4,
+    diff_mol = 10^(-4.41+773.8/(in1yr$temperature_hypo+273.15)-(506.4/(in1yr$temperature_hypo+273.15))^2)*86400/10000, 
   z_dbl = 1/1000,
   diff_eddy = kz
 )
@@ -184,14 +183,14 @@ dummyinput$N_obs = length(dummyinput$ii_obs)
 dummyinput$N_obs_mix = length(idx)
 dummyinput$k600t[which(in1yr$airtemp <= 0 & in1yr$temperature_total <= 4)] = 1e-5
 #dummyinput$theta0[which(in1yr$airtemp <= 0 & in1yr$temperature_total <= 4)] = 1e-5
-dummyinput$nep_lim = 3000; #2000
-dummyinput$sed_lim = 1000; #4000
+dummyinput$nep_lim = 2000; #3000; #2000
+dummyinput$sed_lim = 4000; #4000
 dummyinput$smooth_sigma=0.2;#0.1 ALL EXCEPT TROUT, 0.2 FOR TROUT; feb21
 dummyinput$max_depth = mean(input$max.d);
 
 chains = 3
-iter <-200#2000
-warmup <- 100#500
+iter <-2000
+warmup <- 500
 adapt_delta <- 0.8
 max_treedepth <- 15
 thin <- 1
