@@ -630,7 +630,7 @@ g1 <- ggplot(df) +
   # geom_point(aes(sampledate, pp_met_hw_m3, col = 'meta')) + 
   # geom_point(aes(sampledate, pp_hyp_hw_m3, col = 'hypo')) + 
   ylab('Production in g O2 per m3 per day') + 
-  ylim(0,2) +
+  ylim(0,1) +
   ggtitle('Epilimnion')+
   facet_wrap(~lakeid, ncol=1)+ theme_minimal()
 
@@ -675,7 +675,7 @@ p1 <- ggplot(df) +
   geom_boxplot(data = model.df, aes(x = 'Metabolism', NEP_epi/1000,  fill = 'Metabolism'), alpha = 0.1) +
   ylab('Production in g O2 per m3 per day') +xlab('')+
   ggtitle('Epilimnion')+
-  ylim(0,2) +
+  ylim(0,1) +
   facet_wrap(~lakeid, ncol=1, scales = 'free')+ theme_minimal()+
   theme(legend.text = element_text(size = 11), axis.text.x= element_text(size = 20), plot.title = element_text(size = 20),
         axis.text.y= element_text(size = 20), text = element_text(size = 20), legend.title = element_blank(), strip.text =element_text(size = 20))

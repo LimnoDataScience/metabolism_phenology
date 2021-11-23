@@ -167,10 +167,18 @@ dummyinput <- list(
   airtemp = in1yr$airtemp,
   delvol_epi = c(diff(in1yr$volume_epi),0)/c(in1yr$volume_epi),
   delvol_hyp =  c(diff(in1yr$volume_hypo),0)/c(in1yr$volume_hypo),
-  diff_mol = 1.08 *10e-4,
+  diff_mol = 10^(-4.41+773.8/(in1yr$temperature_hypo+273.15)-(506.4/(in1yr$temperature_hypo+273.15))^2)*86400/10000, # 1.08 *10e-4,
+  #diff_mol = 1.08 *10e-4,
   z_dbl = 1/1000,
   diff_eddy = kz
 )
+
+emp <- (-4.41+773.8/(in1yr$temperature_hypo+273.15)-(506.4/(in1yr$temperature_hypo+273.15))^2)
+logemp <- 10^(emp)
+logemp * 86400/10000
+
+plot(logemp * 8.64)
+abline(h = 1.08 *10e-4, col = 'red', lty = 2)
 
 dummyinput$delvol_epi[strat.pos] = 0
 dummyinput$delvol_hyp[strat.pos] = 0
