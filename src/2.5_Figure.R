@@ -21,6 +21,8 @@ seasonal.df.sed = read_csv('Processed_Output/NEP_seasonal-sed.csv')
 cum.seasonal.df.sed = read_csv('Processed_Output/NEP_seasonal_cumulative-sed.csv')
 seasonal.df.sed$id <- factor(seasonal.df$id , levels= (c("Allequash","BigMuskellunge","Crystal","Sparkling", "Trout","Fish","Mendota","Monona")))
 
+library(RColorBrewer)
+palette_Dark2 <- colorRampPalette(brewer.pal(8, "Dark2"))
 
 g1 = ggplot(seasonal.df[!is.na(seasonal.df$movavg),], 
             aes(as.Date(yday, origin = as.Date('2019-01-01')), (movavg) + NEP_avg2, col = id)) + #*volume/area/1000
@@ -31,7 +33,7 @@ g1 = ggplot(seasonal.df[!is.na(seasonal.df$movavg),],
   # xlab('Day of the year') +
   scale_x_date(breaks = '2 months', labels = date_format("%b")) +
   scale_color_brewer(palette="Dark2") +
-  scale_linetype_manual(values = c(1,1,1,1,1,2,2,2))+
+  scale_linetype_manual(values = c(1,1,1,1,1,4,4,4))+
   theme_minimal()+
   geom_hline(yintercept = 0,linetype="dotted", 
              color = "black", size=1) +
@@ -50,7 +52,7 @@ g4 = ggplot(seasonal.df.epi[!is.na(seasonal.df$movavg),],
   # xlab('Day of the year') +
   scale_x_date(breaks = '2 months', labels = date_format("%b")) +
   scale_color_brewer(palette="Dark2") +
-  scale_linetype_manual(values = c(1,1,1,1,1,2,2,2))+
+  scale_linetype_manual(values = c(1,1,1,1,1,4,4,4))+
   theme_minimal()+
   geom_hline(yintercept = 0,linetype="dotted", 
              color = "black", size=1) +
@@ -69,7 +71,7 @@ g5 = ggplot(seasonal.df.hyp[!is.na(seasonal.df$movavg),],
   # xlab('Day of the year') +
   scale_x_date(breaks = '2 months', labels = date_format("%b")) +
   scale_color_brewer(palette="Dark2") +
-  scale_linetype_manual(values = c(1,1,1,1,1,2,2,2))+
+  scale_linetype_manual(values = c(1,1,1,1,1,4,4,4))+
   theme_minimal()+
   geom_hline(yintercept = 0,linetype="dotted", 
              color = "black", size=1) +
@@ -88,7 +90,7 @@ g6 = ggplot(seasonal.df.sed[!is.na(seasonal.df$movavg),],
   # xlab('Day of the year') +
   scale_x_date(breaks = '2 months', labels = date_format("%b")) +
   scale_color_brewer(palette="Dark2") +
-  scale_linetype_manual(values = c(1,1,1,1,1,2,2,2))+
+  scale_linetype_manual(values = c(1,1,1,1,1,4,4,4))+
   theme_minimal()+
   geom_hline(yintercept = 0,linetype="dotted", 
              color = "black", size=1) +

@@ -40,7 +40,7 @@ g1 = ggplot(seasonal.df.north[!is.na(seasonal.df.north$movavg),],
   # xlab('Day of the year') +
   scale_x_date(breaks = '2 months', labels = date_format("%b")) +
   scale_color_brewer(palette="Dark2") +
-  scale_linetype_manual(values = c(1,1,1,1,1,2,2,2))+
+  scale_linetype_manual(values = c(1,1,1,1,1,4,4,4))+
   theme_minimal()+
   geom_hline(yintercept = 0,linetype="dotted", 
              color = "black", size=1) +
@@ -59,7 +59,7 @@ g4 = ggplot(seasonal.df.epi.north[!is.na(seasonal.df.epi.north$movavg),],
   # xlab('Day of the year') +
   scale_x_date(breaks = '2 months', labels = date_format("%b")) +
   scale_color_brewer(palette="Dark2") +
-  scale_linetype_manual(values = c(1,1,1,1,1,2,2,2))+
+  scale_linetype_manual(values = c(1,1,1,1,1,4,4,4))+
   theme_minimal()+
   geom_hline(yintercept = 0,linetype="dotted", 
              color = "black", size=1) +
@@ -78,7 +78,7 @@ g5 = ggplot(seasonal.df.hyp.north[!is.na(seasonal.df.hyp.north$movavg),],
   # xlab('Day of the year') +
   scale_x_date(breaks = '2 months', labels = date_format("%b")) +
   scale_color_brewer(palette="Dark2") +
-  scale_linetype_manual(values = c(1,1,1,1,1,2,2,2))+
+  scale_linetype_manual(values = c(1,1,1,1,1,4,4,4))+
   theme_minimal()+
   geom_hline(yintercept = 0,linetype="dotted", 
              color = "black", size=1) +
@@ -97,7 +97,7 @@ g6 = ggplot(seasonal.df.sed.north[!is.na(seasonal.df.sed.north$movavg),],
   # xlab('Day of the year') +
   scale_x_date(breaks = '2 months', labels = date_format("%b")) +
   scale_color_brewer(palette="Dark2") +
-  scale_linetype_manual(values = c(1,1,1,1,1,2,2,2))+
+  scale_linetype_manual(values = c(1,1,1,1,1,4,4,4))+
   theme_minimal()+
   geom_hline(yintercept = 0,linetype="dotted", 
              color = "black", size=1) +
@@ -125,7 +125,7 @@ g1 = ggplot(seasonal.df.south[!is.na(seasonal.df.south$movavg),],
   scale_x_date(breaks = '2 months', labels = date_format("%b")) +
   # scale_color_brewer(palette="Dark2") +
   scale_color_manual(values = my_palette) +
-  scale_linetype_manual(values = c(2,2,2,1,1,2,2,2))+
+  scale_linetype_manual(values = c(4,4,4,1,1,2,2,2))+
   theme_minimal()+
   geom_hline(yintercept = 0,linetype="dotted", 
              color = "black", size=1) +
@@ -144,7 +144,7 @@ g4 = ggplot(seasonal.df.epi.south[!is.na(seasonal.df.epi.south$movavg),],
   # xlab('Day of the year') +
   scale_x_date(breaks = '2 months', labels = date_format("%b")) +
   scale_color_manual(values = my_palette) +
-  scale_linetype_manual(values = c(2,2,2,1,1,2,2,2))+
+  scale_linetype_manual(values = c(4,4,4,1,1,2,2,2))+
   theme_minimal()+
   geom_hline(yintercept = 0,linetype="dotted", 
              color = "black", size=1) +
@@ -163,7 +163,7 @@ g5 = ggplot(seasonal.df.hyp.south[!is.na(seasonal.df.hyp.south$movavg),],
   # xlab('Day of the year') +
   scale_x_date(breaks = '2 months', labels = date_format("%b")) +
   scale_color_manual(values = my_palette) +
-  scale_linetype_manual(values = c(2,2,2,1,1,2,2,2))+
+  scale_linetype_manual(values = c(4,4,4,1,1,2,2,2))+
   theme_minimal()+
   geom_hline(yintercept = 0,linetype="dotted", 
              color = "black", size=1) +
@@ -182,7 +182,7 @@ g6 = ggplot(seasonal.df.sed.south[!is.na(seasonal.df.sed.south$movavg),],
   # xlab('Day of the year') +
   scale_x_date(breaks = '2 months', labels = date_format("%b")) +
   scale_color_manual(values = my_palette) +
-  scale_linetype_manual(values = c(2,2,2,1,1,2,2,2))+
+  scale_linetype_manual(values = c(4,4,4,1,1,2,2,2))+
   theme_minimal()+
   geom_hline(yintercept = 0,linetype="dotted", 
              color = "black", size=1) +
