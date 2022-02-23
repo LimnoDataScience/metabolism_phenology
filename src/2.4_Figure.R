@@ -57,7 +57,7 @@ g1.north = ggplot(subset(m.cum.flux.slice, id == c('Allequash',
   ylim(c(-10,7.5))+
   facet_wrap(~id, ncol = 1) +
   scale_linetype_manual(values = c(1,1,1,1,3))+
-  ylab(expression("Cum. fluxes [kg DO"*~m^{-2}*""*"]")) +
+  ylab(expression("Cum. fluxes [kg DO"*~m^{-2}*""*~y^{-1}*""*"]")) +
   scale_color_brewer(palette="Set1") +
   theme.custom +
   theme(legend.position = 'bottom') +
@@ -71,7 +71,7 @@ g1.south = ggplot(subset(m.cum.flux.slice, id %in% c('Fish',
   facet_wrap(~id, ncol = 1) +
   ylim(c(-15,21))+
   scale_linetype_manual(values = c(1,1,1,1,3)) +
-  ylab(expression("Cum. fluxes [kg DO"*~m^{-2}*""*"]")) + # ylab(expression("Cum. fluxes [kg DO"*~m^{-2}*""*~d^{-1}*"]")) +
+  ylab(expression("Cum. fluxes [kg DO"*~m^{-2}*""*~y^{-1}*""*"]")) + # ylab(expression("Cum. fluxes [kg DO"*~m^{-2}*""*~d^{-1}*"]")) +
   scale_color_brewer(palette="Set1") +
   theme.custom +
   theme(legend.position = 'none'); g1.south
@@ -84,7 +84,7 @@ g3.NEP = ggplot(cum.flux.slice) +
   geom_hline(aes(yintercept = 0)) +
   geom_line(aes(time, `Total NEP`/1000, color = id)) +
   scale_color_brewer(palette="Dark2") +
-  ylab(expression("Cum. total NEP [kg DO"*~m^{-2}*""*"]")) +
+  ylab(expression("Cum. total NEP [kg DO"*~m^{-2}*""*~y^{-1}*""*"]")) +
   theme.custom +
   theme(axis.title.y = element_text(size = 7, color = 'darkorange'),
     legend.position = 'bottom') +
@@ -108,7 +108,7 @@ g1.north = ggplot(subset(m.cum.flux.slice_max, id == c('Allequash',
   ylim(c(-12,25))+
   facet_wrap(~id, ncol = 1) +
   scale_linetype_manual(values = c(1,1,1,1,3))+
-  ylab(expression("Max. cum. fluxes [kg DO"*~m^{-2}*""*"]")) +
+  ylab(expression("Max. cum. fluxes [kg DO"*~m^{-2}*""*~y^{-1}*""*"]")) +
   scale_color_brewer(palette="Set1") +
   theme.custom +
   theme(legend.position = 'bottom') +
@@ -122,7 +122,7 @@ g1.south = ggplot(subset(m.cum.flux.slice_max, id %in% c('Fish',
   facet_wrap(~id, ncol = 1) +
   ylim(c(-10,55))+
   scale_linetype_manual(values = c(1,1,1,1,3)) +
-  ylab(expression("Max. cum. fluxes [kg DO"*~m^{-2}*""*"]")) + # ylab(expression("Cum. fluxes [kg DO"*~m^{-2}*""*~d^{-1}*"]")) +
+  ylab(expression("Max. cum. fluxes [kg DO"*~m^{-2}*""*~y^{-1}*""*"]")) + # ylab(expression("Cum. fluxes [kg DO"*~m^{-2}*""*~d^{-1}*"]")) +
   scale_color_brewer(palette="Set1") +
   theme.custom +
   theme(legend.position = 'none'); g1.south
@@ -135,7 +135,7 @@ g3.NEP = ggplot(cum.flux.slice) +
   geom_hline(aes(yintercept = 0)) +
   geom_line(aes(time, `Total NEP`/1000, color = id)) +
   scale_color_brewer(palette="Dark2") +
-  ylab(expression("Max. cum. total NEP [kg DO"*~m^{-2}*""*"]")) +
+  ylab(expression("Max. cum. total NEP [kg DO"*~m^{-2}*""*~y^{-1}*""*"]")) +
   theme.custom +
   theme(axis.title.y = element_text(size = 7, color = 'darkorange'),
         legend.position = 'bottom') +
@@ -159,7 +159,7 @@ g1.north = ggplot(subset(m.cum.flux.slice_min, id == c('Allequash',
   ylim(c(-25,5))+
   facet_wrap(~id, ncol = 1) +
   scale_linetype_manual(values = c(1,1,1,1,3))+
-  ylab(expression("Min. cum. fluxes [kg DO"*~m^{-2}*""*"]")) +
+  ylab(expression("Min. cum. fluxes [kg DO"*~m^{-2}*""*~y^{-1}*""*"]")) +
   scale_color_brewer(palette="Set1") +
   theme.custom +
   theme(legend.position = 'bottom') +
@@ -173,7 +173,7 @@ g1.south = ggplot(subset(m.cum.flux.slice_min, id %in% c('Fish',
   facet_wrap(~id, ncol = 1) +
   ylim(c(-40,5))+
   scale_linetype_manual(values = c(1,1,1,1,3)) +
-  ylab(expression("Min. cum. fluxes [kg DO"*~m^{-2}*""*"]")) + # ylab(expression("Cum. fluxes [kg DO"*~m^{-2}*""*~d^{-1}*"]")) +
+  ylab(expression("Min. cum. fluxes [kg DO"*~m^{-2}*""*~y^{-1}*""*"]")) + # ylab(expression("Cum. fluxes [kg DO"*~m^{-2}*""*~d^{-1}*"]")) +
   scale_color_brewer(palette="Set1") +
   theme.custom +
   theme(legend.position = 'none'); g1.south
@@ -186,7 +186,7 @@ g3.NEP = ggplot(cum.flux.slice) +
   geom_hline(aes(yintercept = 0)) +
   geom_line(aes(time, `Total NEP`/1000, color = id)) +
   scale_color_brewer(palette="Dark2") +
-  ylab(expression("Min. cum. total NEP [kg DO"*~m^{-2}*""*"]")) +
+  ylab(expression("Min. cum. total NEP [kg DO"*~m^{-2}*""*~y^{-1}*""*"]")) +
   theme.custom +
   theme(axis.title.y = element_text(size = 7, color = 'darkorange'),
         legend.position = 'bottom') +

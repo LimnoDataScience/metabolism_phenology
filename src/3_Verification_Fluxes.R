@@ -731,5 +731,5 @@ ggsave(file = paste0('Figures/northernLakes_C14_boxplots.png'), p, dpi = 300, wi
 
 v <- g.param / g.living / p + plot_annotation(tag_levels = 'A') ;v
 
-ggsave(file = 'Figures/Fig_8.png', v, dpi = 600, width = 22.5, height = 20.5, units='in')
-ggsave(file = 'Figures/Fig_8.pdf', v, dpi = 600, width = 22.5, height = 20.5, units='in')
+ggsave(file = 'Figures/Fig_8.png', v, dpi = 600, width = 27, height = 20.5, units='in')
+ggsave(file = 'Figures/Fig_8.pdf', v, dpi = 600, width = 27, height = 20.5, units='in')
