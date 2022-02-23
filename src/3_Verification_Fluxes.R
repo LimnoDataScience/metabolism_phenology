@@ -1,6 +1,6 @@
 ## First, check estimated parameters to identify N-S differences
-
-setwd('/home/robert/Projects/DSI/metabolism_phenology/')
+setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+setwd('..')
 
 library(tidyverse)
 library(patchwork)
@@ -42,8 +42,8 @@ g.param <- ggplot(df.fluxes) +
   geom_boxplot(aes(x = lakeid, y = value)) +
   facet_wrap(~ variable,scales = 'free') +
   xlab('') +
-  # ylab('Idealized Fluxes: NEP in mg/m3/d; SED ing mg/m2/d')+
-  ylab(expression(atop("Idealized flux parameters", paste("NEP in mg/m3/d, SED ing mg/m2/d")))) +
+  # ylab('Modeled Fluxes: NEP in mg/m3/d; SED in mg/m2/d')+
+  ylab(expression(atop("Estimated flux parameters", paste("NEP in mg/m3/d, SED in mg/m2/d")))) +
   theme_minimal() +theme(legend.text = element_text(size = 11), axis.text.x= element_text(size = 20), plot.title = element_text(size = 20),
                          axis.text.y= element_text(size = 20), text = element_text(size = 20), legend.title = element_blank(), strip.text =element_text(size = 20),
                          legend.position = 'bottom')
@@ -375,7 +375,7 @@ ggplot(df.livingstone ) +
 
 g1 <-ggplot(coeff ) +
   geom_density(aes(Jv, fill = 'Livingstone'), alpha = 0.1) +
-  geom_density(aes((-1)*NEP,  fill = 'Metabolism'), alpha = 0.1) +
+  geom_density(aes((-1)*NEP,  fill = 'This study'), alpha = 0.1) +
   ggtitle('Volumetric DO consumption') +
   facet_wrap(~ id, ncol=1, scales = 'free')+
   xlab(expression(atop("Jv (Livingstone) against", paste("average hypo. NEP (g/m3/d)")))) +
@@ -387,7 +387,7 @@ g1 <-ggplot(coeff ) +
 
 g2 <- ggplot(coeff ) +
   geom_density(aes(Ja, fill = 'Livingstone'), alpha = 0.1) +
-  geom_density(aes(SED,  fill = 'Metabolism'), alpha = 0.1) +
+  geom_density(aes(SED,  fill = 'This study'), alpha = 0.1) +
   ggtitle('Areal DO consumption') +
   facet_wrap(~ id, ncol = 1, scales = 'free')+
   xlab(expression(atop("Ja (Livingstone) against", paste("average hypo. SED+ENTR+DIFF (g/m2/d)")))) +
@@ -399,7 +399,7 @@ g2 <- ggplot(coeff ) +
 
 g4 <- ggplot(coeff ) +
   geom_density(aes(Ja, fill = 'Livingstone'), alpha = 0.1) +
-  geom_density(aes(SED_wo,  fill = 'Metabolism'), alpha = 0.1) +
+  geom_density(aes(SED_wo,  fill = 'This study'), alpha = 0.1) +
   ggtitle('Areal DO consumption') +
   facet_wrap(~ id, ncol = 1, scales = 'free')+
   xlab(expression(atop("Ja (Livingstone) against", paste("average hypo. SED (g/m2/d)")))) +
@@ -412,7 +412,7 @@ g4 <- ggplot(coeff ) +
 
 g3 <-ggplot(coeff ) +
   geom_density(aes(Jz, fill = 'Livingstone'), alpha = 0.1) +
-  geom_density(aes((-1) * NEP + SEDmgm3,  fill = 'Metabolism'), alpha = 0.1) +
+  geom_density(aes((-1) * NEP + SEDmgm3,  fill = 'This study'), alpha = 0.1) +
   ggtitle('Total average DO consumption') +
   facet_wrap(~ id, ncol =1, scales = 'free')+
   xlab(expression(atop("Jz (Livingstone) against", paste("average hypo. consumption (g/m3/d)")))) +
@@ -626,7 +626,7 @@ model.df = data.frame('NEP_epi' = c(cr.df$fnep_middle, sp.df$fnep_middle, tr.df$
 
 g1 <- ggplot(df) +
   geom_point(aes(sampledate, pp_epi_hw_m3 * 44/12 * 32/44 * 1/1000 * 24, col = '14C')) +
-  geom_line(data= model.df, aes(datetime, NEP_epi/1000, col = 'Metabolism')) +
+  geom_line(data= model.df, aes(datetime, NEP_epi/1000, col = 'This study')) +
   # geom_point(aes(sampledate, pp_met_hw_m3, col = 'meta')) + 
   # geom_point(aes(sampledate, pp_hyp_hw_m3, col = 'hypo')) + 
   ylab('Production in g O2 per m3 per day') + 
@@ -648,7 +648,7 @@ g3 <- ggplot(df) +
   # geom_point(aes(sampledate, pp_epi_hw_m3, col = 'epi')) +
   # geom_point(aes(sampledate, pp_met_hw_m3, col = 'meta')) +
   geom_point(aes(sampledate, pp_hyp_hw_m3  * 44/12 * 32/44  * 1/1000 * 24, col = '14C')) +
-  geom_line(data= model.df, aes(datetime, NEP_hypo/1000, col = 'Metabolism')) +
+  geom_line(data= model.df, aes(datetime, NEP_hypo/1000, col = 'This study')) +
   ylab('Production in g O2 per m3 per day') +
   ggtitle('Hypolimnion')+
   # ylim(0,130) +
@@ -659,7 +659,7 @@ g4 <- ggplot(df) +
   # geom_point(aes(sampledate, pp_epi_hw_m3, col = 'epi')) +
   # geom_point(aes(sampledate, pp_met_hw_m3, col = 'meta')) +
   geom_point(aes(sampledate, (pp_hyp_hw_m3 + pp_met_hw_m3)  * 44/12 * 32/44  * 1/1000 * 24, col = '14C')) +
-  geom_line(data= model.df, aes(datetime, NEP_hypo / 1000, col = 'Metabolism')) +
+  geom_line(data= model.df, aes(datetime, NEP_hypo / 1000, col = 'This study')) +
   ylab('Production in g O2 per m3 per day') +
   ggtitle('Metalimnon + Hypolimnion')+
   # ylim(0,130) +
@@ -672,7 +672,7 @@ ggsave(file = paste0('Figures/northernLakes_C14.png'), g, dpi = 300, width =300,
 
 p1 <- ggplot(df) +
   geom_boxplot(aes(x = '14C', pp_epi_hw_m3 * 44/12 * 32/44 * 1/1000 * 24*1.25, fill = '14C'), alpha = 0.1) +
-  geom_boxplot(data = model.df, aes(x = 'Metabolism', NEP_epi/1000,  fill = 'Metabolism'), alpha = 0.1) +
+  geom_boxplot(data = model.df, aes(x = 'This study', NEP_epi/1000,  fill = 'This study'), alpha = 0.1) +
   ylab('Production in g O2 per m3 per day') +xlab('')+
   ggtitle('Epilimnion')+
   ylim(0,1) +
@@ -682,7 +682,7 @@ p1 <- ggplot(df) +
 
 p2 <- ggplot(df) +
   geom_boxplot(aes(x = '14C', pp_hyp_hw_m3  * 44/12 * 32/44  * 1/1000 * 24 *1.25, fill = '14C'), alpha = 0.1) +
-  geom_boxplot(data = model.df, aes(x = 'Metabolism', NEP_hypo/1000,  fill = 'Metabolism'), alpha = 0.1) +
+  geom_boxplot(data = model.df, aes(x = 'This study', NEP_hypo/1000,  fill = 'This study'), alpha = 0.1) +
   ylab('Production in g O2 per m3 per day') +xlab('')+
   ggtitle('Hypolimnion')+
   # ylim(0,130) +
@@ -692,7 +692,7 @@ p2 <- ggplot(df) +
 
 p3 <- ggplot(df) +
   geom_boxplot(aes(x = '14C', (pp_hyp_hw_m3 + pp_met_hw_m3)  * 44/12 * 32/44  * 1/1000 * 24 * 1.25, fill = '14C'), alpha = 0.1) +
-  geom_boxplot(data = model.df, aes(x = 'Metabolism', NEP_hypo/1000,  fill = 'Metabolism'), alpha = 0.1) +
+  geom_boxplot(data = model.df, aes(x = 'This study', NEP_hypo/1000,  fill = 'This study'), alpha = 0.1) +
   ylab('Production in g O2 per m3 per day') + xlab('')+ylim(0,1) +
   ggtitle('Metalimnion + Hypolimnion')+
   # ylim(0,130) +
@@ -702,7 +702,7 @@ p3 <- ggplot(df) +
 
 p4 <- ggplot(df) +
   geom_boxplot(aes(x = '14C', pp_hyp_hw_m3  * 44/12 * 32/44  * 1/1000 * 24 *1.27, fill = '14C'), alpha = 0.1) +
-  geom_boxplot(data = model.df, aes(x = 'Metabolism', Total_NEP_hypo/1000,  fill = 'Metabolism'), alpha = 0.1) +
+  geom_boxplot(data = model.df, aes(x = 'This study', Total_NEP_hypo/1000,  fill = 'This study'), alpha = 0.1) +
   ylab('Production in g O2 per m3 per day') +xlab('')+
   ggtitle('Hypolimnion')+
   ylim(-0.1, 0.5) +
@@ -714,7 +714,7 @@ p4 <- ggplot(df) +
 
 p4p5 <- ggplot(df) +
   geom_boxplot(aes(x = '14C', (pp_hyp_hw_m3 + pp_met_hw_m3)  * 44/12 * 32/44  * 1/1000 * 24 * 1.27, fill = '14C'), alpha = 0.1) +
-  geom_boxplot(data = model.df, aes(x = 'Metabolism', Total_NEP_hypo/1000,  fill = 'Metabolism'), alpha = 0.1) +
+  geom_boxplot(data = model.df, aes(x = 'This study', Total_NEP_hypo/1000,  fill = 'This study'), alpha = 0.1) +
   ylab('Production in g O2 per m3 per day') + xlab('')+ylim(0,1) +
   ggtitle('Metalimnion + Hypolimnion')+
   # ylim(0,130) +

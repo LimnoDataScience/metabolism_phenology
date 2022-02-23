@@ -1,4 +1,7 @@
-setwd('/home/robert/Projects/DSI/metabolism_phenology/')
+# setwd('/home/robert/Projects/DSI/metabolism_phenology/')
+setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+setwd('..')
+
 
 library(tidyverse)
 library(patchwork)
@@ -147,6 +150,7 @@ detach(dt1)
 lks <- list.dirs(path = 'Driver_Data/extdata/', full.names = TRUE, recursive = F)
 id <- c('FI','ME', 'MO', 'AL', 'TR','BM', 'SP', 'CR')
 
+t = list()
 for (ii in lks){
   # print(paste0('Running ',ii))
   data <- read.csv(paste0(ii,'/', list.files(ii, pattern = 'pball', include.dirs = T)))
@@ -160,50 +164,115 @@ for (ii in lks){
   A <- eg_nml$morphometry$A
   width =  eg_nml$morphometry$bsn_wid
   
-  summerDate <- dt1$sampledate[which.min(abs(dt1$sampledate - as.Date('1999-08-01')))]
+  # summerDate <- dt1$sampledate[which.min(abs(dt1$sampledate - as.Date('1999-08-01')))]
   
   wtr.profile <- dt1 %>%
     filter(lakeid == id[match(ii, lks)])#
   
-  summerDate <- wtr.profile$sampledate[which.min(abs(wtr.profile$sampledate - as.Date('1999-08-01')))]
+  # summerDate <- wtr.profile$sampledate[which.min(abs(wtr.profile$sampledate - as.Date('1999-08-01')))]
   
-  wtr.profile <- wtr.profile %>%
-    filter(sampledate == summerDate) %>%
-    arrange(depth)
+  imp.dep <- as.factor(wtr.profile$depth)[which(summary(as.factor(wtr.profile$depth)) >mean(summary(as.factor(wtr.profile$depth))))]
+  imp.dep <- sort(as.numeric(as.character(imp.dep)))
+  interp.profile = c()
+  for (i in unique(wtr.profile$sampledate)){
+    dat =  wtr.profile %>%
+      filter(sampledate == i) %>%
+      arrange(depth)
+    if(all(is.na(dat$wtemp))){
+      next 
+    }
+    
+
+    d = data.frame(matrix(NA, nrow = 1, ncol = length(seq(min(imp.dep),max(imp.dep),1))+1))
+    colnames(d) = c('datetime', paste0('wtr_',seq(min(imp.dep),max(imp.dep),1)))
+    d[2:ncol(d)] = approx(dat$depth, dat$wtemp, seq(min(imp.dep),max(imp.dep),1))$y
+    d$datetime = as.POSIXct(unique(dat$sampledate))
+    if (is.na(d[ncol(d)])){
+      d[ncol(d)] = d[max(which(!is.na(d[2:ncol(d)])))]
+    }
+    if (is.na(d[2])){
+      d[2] = d[min(which(!is.na(d[2:ncol(d)]))+1)]
+    }
+
+    d[2:ncol(d)] <- na.approx(d[2:ncol(d)])
+    interp.profile <- rbind(interp.profile,d)
+  }
+  # wtr.profile <- wtr.profile %>%
+  #   # filter(sampledate == summerDate) %>%
+  #   arrange(sampledate, depth) %>%
+  #   group_by(sampledate) %>%
+  #   mutate(temp = approx(depth, wtemp, seq(1,max(imp.dep),1))$y,
+  #          dep = seq(1,max(imp.dep),1)) %>%
+  #   select(sampledate, dep, temp)
+  # 
+  # na.id = which(is.na(wtr.profile$wtemp))
+  # 
+  # wtr.profile <- wtr.profile[- na.id, ]
   
-  na.id = which(is.na(wtr.profile$wtemp))
+  # wnd = meteo$WindSpeed[match(summerDate, as.Date(meteo$time))]
+  wnd = meteo$WindSpeed[match(as.Date(meteo$time), as.Date(interp.profile$datetime))]
   
-  wtr.profile <- wtr.profile[- na.id, ]
-  
-  wnd = meteo$WindSpeed[match(summerDate, as.Date(meteo$time))]
-  
-  if (max(H) < max(wtr.profile$depth)){
-    H = c(max(wtr.profile$depth), H)
+  if (max(H) < max( seq(min(imp.dep),max(imp.dep),1))){
+    H = c(max( seq(min(imp.dep),max(imp.dep),1)), H)
     A = c(min(A), A)
   }
-  area = approx(rev(H), rev(A), wtr.profile$depth)
+  area = approx(rev(H), rev(A),  seq(min(imp.dep),max(imp.dep),1))
   
-  mT = meta.depths(wtr = wtr.profile$wtemp, depths = wtr.profile$depth, slope = 0.1, seasonal = TRUE, mixed.cutoff = 1)
+  # df <- reshape(wtr.profile, idvar = "sampledate", timevar = "depth", direction = "wide")
   
-  LN = lake.number(bthA = area$y, bthD = area$x, 
-                   uStar = uStar(wndSpeed = wnd, wndHeight = 2, averageEpiDense = water.density(wtr.profile$wtemp[1])), 
-  St = schmidt.stability(wtr = wtr.profile$wtemp, depths = wtr.profile$depth, bthA = area$y, bthD = area$x, sal = 0), 
-  metaT = mT[1], metaB = mT[2], averageHypoDense = water.density(wtr.profile$wtemp[nrow(wtr.profile)]))
+  # mT = meta.depths(wtr = wtr.profile$wtemp, depths = wtr.profile$depth, slope = 0.1, seasonal = TRUE, mixed.cutoff = 1)
+  mT = ts.meta.depths(wtr = interp.profile)
   
-  g = 9.81 * ( water.density(wtr.profile$wtemp[nrow(wtr.profile)]) - water.density(wtr.profile$wtemp[1]))/998.2
+  # LN = lake.number(bthA = area$y, bthD = area$x, 
+                   # uStar = uStar(wndSpeed = na.omit(wnd), wndHeight = 2, averageEpiDense = water.density(wtr.profile$wtemp[1])) 
   
-  Ri = (g * mT[1])^(1/2) /  (1 * 10^(-4)) # s-1
+  LN = ts.lake.number(wtr = interp.profile, 
+                      wnd = data.frame('datetime' = interp.profile$datetime,
+                                       'wind' = na.omit(wnd)),
+                      wnd.height = 10,
+                      bathy = data.frame('depths' =  seq(min(imp.dep),max(imp.dep),1),
+                                         'areas' = area$y))
+  
+
+  
+  # St = schmidt.stability(wtr = wtr.profile$wtemp, depths = wtr.profile$depth, bthA = area$y, bthD = area$x, sal = 0), 
+  # metaT = mT[1], metaB = mT[2], averageHypoDense = water.density(wtr.profile$wtemp[nrow(wtr.profile)]))
+  # 
+  # g = 9.81 * ( water.density(wtr.profile$wtemp[nrow(wtr.profile)]) - water.density(wtr.profile$wtemp[1]))/998.2
+  g = 9.81 * ( water.density(interp.profile[,ncol(interp.profile)]) - water.density(interp.profile[,2]))/998.2
+  
+  Ri = (g * mT[,2])^(1/2) /  (1 * 10^(-4)) # s-1
   R = Ri/width
   
-  W = wedderburn.number(delta_rho =  ( water.density(wtr.profile$wtemp[nrow(wtr.profile)]) - water.density(wtr.profile$wtemp[1])), 
-                                       metaT = mT[1], uSt =  uStar(wndSpeed = wnd, wndHeight = 2, averageEpiDense = water.density(wtr.profile$wtemp[1])),
-                        Ao = max(A), AvHyp_rho =  water.density(wtr.profile$wtemp[nrow(wtr.profile)]))
+  df.R = data.frame('datetime' = LN$datetime, 'Radius' = R)
   
-  print(paste0(id[match(ii, lks)],': LN = ',round(LN,1),', R = ', round(R,2), ', W = ', round(W,1)))
+  g1 <- ggplot(LN) +
+    geom_line(aes(datetime, lake.number)) +
+    xlab('') + ylab('Lake Number (-)') +
+    scale_y_continuous(trans='log10') +
+    geom_hline(yintercept=c(1), linetype='dashed', color=c('red')) +
+    ggtitle(paste0(id[match(ii, lks)],": mean LN = ",round(mean(LN$lake.number,na.rm =T),1))) +
+    theme_minimal() 
+  g2 <- ggplot(df.R) +
+    geom_line(aes(datetime, Radius)) +
+    xlab('') + ylab('Rossby Radius (m)') +
+    geom_hline(yintercept=c(1), linetype='dashed', color=c('red')) +
+    ggtitle(paste0(id[match(ii, lks)],': mean R = ',round(mean(df.R$Radius,na.rm =T),1),' m')) +
+    theme_minimal() 
+  ggsave(paste0('Figures/',id[match(ii, lks)],'_oneD.png'), g1/g2, width =5, height = 8, unit = 'in' )
+  
+  t[[match(ii, lks)]] <- g1/g2
+  # W = wedderburn.number(delta_rho =  ( water.density(wtr.profile$wtemp[nrow(wtr.profile)]) - water.density(wtr.profile$wtemp[1])), 
+  #                                      metaT = mT[1], uSt =  uStar(wndSpeed = wnd, wndHeight = 2, averageEpiDense = water.density(wtr.profile$wtemp[1])),
+  #                       Ao = max(A), AvHyp_rho =  water.density(wtr.profile$wtemp[nrow(wtr.profile)]))
+  # 
+  # print(paste0(id[match(ii, lks)],': LN = ',round(LN,1),', R = ', round(R,2), ', W = ', round(W,1)))
 }
   
+g <- (t[[4]] | t[[6]] )/ (t[[8]] | t[[7]]) / (t[[5]] | t[[1]]) / (t[[2]] | t[[3]])+ plot_annotation(tag_levels = 'A');g
   
   
-  
+ggsave(paste0('Figures/TS_oneD.png'), g, width =10, height = 15, unit = 'in' )
+
   
   
