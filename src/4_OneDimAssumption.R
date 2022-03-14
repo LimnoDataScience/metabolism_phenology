@@ -13,7 +13,8 @@ library(pracma)
 library(lubridate)
 library(LakeMetabolizer)
 library(zoo)
-
+library(MASS)
+library(scales)
 
 source('src/functions_driver.R')
 
@@ -151,6 +152,7 @@ lks <- list.dirs(path = 'Driver_Data/extdata/', full.names = TRUE, recursive = F
 id <- c('FI','ME', 'MO', 'AL', 'TR','BM', 'SP', 'CR')
 
 t = list()
+t1 = list()
 for (ii in lks){
   # print(paste0('Running ',ii))
   data <- read.csv(paste0(ii,'/', list.files(ii, pattern = 'pball', include.dirs = T)))
@@ -246,22 +248,39 @@ for (ii in lks){
   
   df.R = data.frame('datetime' = LN$datetime, 'Radius' = R)
   
-  g1 <- ggplot(LN) +
+  stats = LN %>%
+    mutate(year = year(datetime), ln = ifelse(lake.number > 1, 'above', 'below'),
+           doy = ifelse(lake.number > 1, yday(datetime), NA),
+           month = ifelse(lake.number > 1, month(datetime), NA)) %>%
+    group_by(year) %>%
+    summarise('duration' = max(doy, na.rm=T) - min(doy, na.rm = T),
+              'percentage' = (length(na.omit(doy))*100)/ length(ln), 
+              'start' = min(month, na.rm = T), 
+              'end' = max(month, na.rm=T))
+  
+  g1 <- ggplot(subset(LN, datetime >= '2013-01-01 00:00:00')) +
     geom_line(aes(datetime, lake.number)) +
+    geom_point(aes(datetime, lake.number)) +
     xlab('') + ylab('Lake Number (-)') +
-    scale_y_continuous(trans='log10') +
+    # scale_y_continuous(trans='log10') +
+    scale_y_log10(breaks = trans_breaks('log10', function(x) 10^x), labels =
+                  trans_format('log10', function(x) 10^x)) +
+    # coord_trans(y='log10')+
     geom_hline(yintercept=c(1), linetype='dashed', color=c('red')) +
-    ggtitle(paste0(id[match(ii, lks)],": mean LN = ",round(mean(LN$lake.number,na.rm =T),1))) +
+    ggtitle(paste0(id[match(ii, lks)],": mean annual period of LN > 1 (",round(mean(stats$percentage),0), '% of data',") from ",month.abb[mean(stats$start)],' to ', month.abb[mean(stats$end)],
+                   ' for ',round(mean(stats$duration),0), ' days')) +
     theme_minimal() 
   g2 <- ggplot(df.R) +
     geom_line(aes(datetime, Radius)) +
+    geom_point(aes(datetime, Radius)) +
     xlab('') + ylab('Rossby Radius (m)') +
     geom_hline(yintercept=c(1), linetype='dashed', color=c('red')) +
     ggtitle(paste0(id[match(ii, lks)],': mean R = ',round(mean(df.R$Radius,na.rm =T),1),' m')) +
     theme_minimal() 
   ggsave(paste0('Figures/',id[match(ii, lks)],'_oneD.png'), g1/g2, width =5, height = 8, unit = 'in' )
   
-  t[[match(ii, lks)]] <- g1/g2
+  t[[match(ii, lks)]] <- g1#/g2
+  t1[[match(ii, lks)]] <- g2
   # W = wedderburn.number(delta_rho =  ( water.density(wtr.profile$wtemp[nrow(wtr.profile)]) - water.density(wtr.profile$wtemp[1])), 
   #                                      metaT = mT[1], uSt =  uStar(wndSpeed = wnd, wndHeight = 2, averageEpiDense = water.density(wtr.profile$wtemp[1])),
   #                       Ao = max(A), AvHyp_rho =  water.density(wtr.profile$wtemp[nrow(wtr.profile)]))
@@ -270,9 +289,11 @@ for (ii in lks){
 }
   
 g <- (t[[4]] | t[[6]] )/ (t[[8]] | t[[7]]) / (t[[5]] | t[[1]]) / (t[[2]] | t[[3]])+ plot_annotation(tag_levels = 'A');g
+g1 <- (t1[[4]] | t1[[6]] )/ (t1[[8]] | t1[[7]]) / (t1[[5]] | t1[[1]]) / (t1[[2]] | t1[[3]])+ plot_annotation(tag_levels = 'A');g
   
   
-ggsave(paste0('Figures/TS_oneD.png'), g, width =10, height = 15, unit = 'in' )
+ggsave(paste0('Figures/LN_specific_oneD.png'), g, width =15, height = 15, unit = 'in' )
+ggsave(paste0('Figures/RR_oneD.png'), g1, width =15, height = 15, unit = 'in' )
 
   
   
