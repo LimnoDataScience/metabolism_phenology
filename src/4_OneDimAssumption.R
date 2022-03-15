@@ -153,6 +153,7 @@ id <- c('FI','ME', 'MO', 'AL', 'TR','BM', 'SP', 'CR')
 
 t = list()
 t1 = list()
+t2=list()
 for (ii in lks){
   # print(paste0('Running ',ii))
   data <- read.csv(paste0(ii,'/', list.files(ii, pattern = 'pball', include.dirs = T)))
@@ -256,9 +257,15 @@ for (ii in lks){
     summarise('duration' = max(doy, na.rm=T) - min(doy, na.rm = T),
               'percentage' = (length(na.omit(doy))*100)/ length(ln), 
               'start' = min(month, na.rm = T), 
-              'end' = max(month, na.rm=T))
+              'end' = max(month, na.rm=T),
+              'startday' = min(doy, na.rm = T),
+              'endday' = max(doy, na.rm = T))
   
-  g1 <- ggplot(subset(LN, datetime >= '2013-01-01 00:00:00')) +
+  LN = LN %>%
+    mutate(yday = yday(datetime),
+           year= year(datetime))
+  
+  g1 <- ggplot(LN) +#ggplot(subset(LN, datetime >= '2013-01-01 00:00:00')) +
     geom_line(aes(datetime, lake.number)) +
     geom_point(aes(datetime, lake.number)) +
     xlab('') + ylab('Lake Number (-)') +
@@ -270,17 +277,59 @@ for (ii in lks){
     ggtitle(paste0(id[match(ii, lks)],": mean annual period of LN > 1 (",round(mean(stats$percentage),0), '% of data',") from ",month.abb[mean(stats$start)],' to ', month.abb[mean(stats$end)],
                    ' for ',round(mean(stats$duration),0), ' days')) +
     theme_minimal() 
-  g2 <- ggplot(df.R) +
-    geom_line(aes(datetime, Radius)) +
-    geom_point(aes(datetime, Radius)) +
-    xlab('') + ylab('Rossby Radius (m)') +
+  
+  g3<-ggplot(LN) +#ggplot(subset(LN, datetime >= '2013-01-01 00:00:00')) +
+    geom_line(aes(as.Date(yday), lake.number, col = factor(year))) +
+    geom_point(aes(as.Date(yday), lake.number, col = factor(year))) +
+    xlab('') + ylab('Lake Number (-)') +
+    # scale_y_continuous(trans='log10') +
+    geom_vline(xintercept = mean(stats$startday), linetype='dashed') +
+    geom_vline(xintercept = mean(stats$endday), linetype='dashed') +
+    scale_y_log10(breaks = trans_breaks('log10', function(x) 10^x), labels =
+                    trans_format('log10', function(x) 10^x)) +
+    # coord_trans(y='log10')+
     geom_hline(yintercept=c(1), linetype='dashed', color=c('red')) +
-    ggtitle(paste0(id[match(ii, lks)],': mean R = ',round(mean(df.R$Radius,na.rm =T),1),' m')) +
-    theme_minimal() 
+    ggtitle(paste0(id[match(ii, lks)],": mean annual period of LN > 1 (",round(mean(stats$percentage),0), '% of data',") from ",month.abb[month(as.Date(mean(stats$startday)))],' to ', month.abb[month(as.Date(mean(stats$endday)))],
+                   ' for ',round(mean(stats$duration),0), ' days')) +
+    scale_x_date(breaks = "1 month", date_labels = "%b") +
+    theme(legend.position="none") +
+    theme_minimal() +
+    theme(legend.position="none")
+  
+  df.R = df.R %>%
+    mutate(yday = yday(datetime),
+           year= year(datetime))
+  g2 <- ggplot(df.R) +#ggplot(subset(LN, datetime >= '2013-01-01 00:00:00')) +
+    geom_line(aes(as.Date(yday), Radius, col = factor(year))) +
+    geom_point(aes(as.Date(yday), Radius, col = factor(year))) +
+    xlab('') + ylab('Rossby radius (m)') +
+    # scale_y_continuous(trans='log10') +
+    # geom_vline(xintercept = mean(stats$startday), linetype='dashed') +
+    # geom_vline(xintercept = mean(stats$endday), linetype='dashed') +
+    # scale_y_log10(breaks = trans_breaks('log10', function(x) 10^x), labels =
+                    # trans_format('log10', function(x) 10^x)) +
+    # coord_trans(y='log10')+
+    geom_hline(yintercept=c(1), linetype='dashed', color=c('red')) +
+    # ggtitle(paste0(id[match(ii, lks)],": mean annual period of LN > 1 (",round(mean(stats$percentage),0), '% of data',") from ",month.abb[month(as.Date(mean(stats$startday)))],' to ', month.abb[month(as.Date(mean(stats$endday)))],
+                   # ' for ',round(mean(stats$duration),0), ' days')) +
+    ggtitle(paste0(id[match(ii, lks)],': mean long-term R = ',round(mean(df.R$Radius,na.rm =T),1),' m')) +
+    scale_x_date(breaks = "1 month", date_labels = "%b") +
+    theme(legend.position="none") +
+    theme_minimal() +
+    theme(legend.position="none")
+    
+    # ggplot(df.R) +
+    # geom_line(aes(datetime, Radius)) +
+    # geom_point(aes(datetime, Radius)) +
+    # xlab('') + ylab('Rossby Radius (m)') +
+    # geom_hline(yintercept=c(1), linetype='dashed', color=c('red')) +
+    # ggtitle(paste0(id[match(ii, lks)],': mean R = ',round(mean(df.R$Radius,na.rm =T),1),' m')) +
+    # theme_minimal() 
   ggsave(paste0('Figures/',id[match(ii, lks)],'_oneD.png'), g1/g2, width =5, height = 8, unit = 'in' )
   
   t[[match(ii, lks)]] <- g1#/g2
   t1[[match(ii, lks)]] <- g2
+  t2[[match(ii, lks)]] <- g3
   # W = wedderburn.number(delta_rho =  ( water.density(wtr.profile$wtemp[nrow(wtr.profile)]) - water.density(wtr.profile$wtemp[1])), 
   #                                      metaT = mT[1], uSt =  uStar(wndSpeed = wnd, wndHeight = 2, averageEpiDense = water.density(wtr.profile$wtemp[1])),
   #                       Ao = max(A), AvHyp_rho =  water.density(wtr.profile$wtemp[nrow(wtr.profile)]))
@@ -288,12 +337,14 @@ for (ii in lks){
   # print(paste0(id[match(ii, lks)],': LN = ',round(LN,1),', R = ', round(R,2), ', W = ', round(W,1)))
 }
   
-g <- (t[[4]] | t[[6]] )/ (t[[8]] | t[[7]]) / (t[[5]] | t[[1]]) / (t[[2]] | t[[3]])+ plot_annotation(tag_levels = 'A');g
-g1 <- (t1[[4]] | t1[[6]] )/ (t1[[8]] | t1[[7]]) / (t1[[5]] | t1[[1]]) / (t1[[2]] | t1[[3]])+ plot_annotation(tag_levels = 'A');g
+g <- (t[[4]] | t[[6]] )/ (t[[8]] | t[[7]]) / (t[[5]] | t[[1]]) / (t[[2]] | t[[3]])+ plot_annotation(tag_levels = 'A');
+g1 <- (t1[[4]] | t1[[6]] )/ (t1[[8]] | t1[[7]]) / (t1[[5]] | t1[[1]]) / (t1[[2]] | t1[[3]])+ plot_annotation(tag_levels = 'A')
+g2 <- (t2[[4]] | t2[[6]] )/ (t2[[8]] | t2[[7]]) / (t2[[5]] | t2[[1]]) / (t2[[2]] | t2[[3]])+ plot_annotation(tag_levels = 'A')
   
   
-ggsave(paste0('Figures/LN_specific_oneD.png'), g, width =15, height = 15, unit = 'in' )
+ggsave(paste0('Figures/LN_oneD.png'), g, width =15, height = 15, unit = 'in' )
 ggsave(paste0('Figures/RR_oneD.png'), g1, width =15, height = 15, unit = 'in' )
+ggsave(paste0('Figures/LN_all_oneD.png'), g2, width =15, height = 15, unit = 'in' )
 
   
   
