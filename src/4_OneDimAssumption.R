@@ -249,6 +249,14 @@ for (ii in lks){
   
   df.R = data.frame('datetime' = LN$datetime, 'Radius' = R)
   
+  LN = LN %>%
+    mutate(month = month(datetime)) %>%
+    filter(month >= 4 & month < 11)
+  
+  df.R = df.R %>%
+    mutate(month = month(datetime)) %>%
+    filter(month >= 4 & month < 11)
+  
   stats = LN %>%
     mutate(year = year(datetime), ln = ifelse(lake.number > 1, 'above', 'below'),
            doy = ifelse(lake.number > 1, yday(datetime), NA),
@@ -289,12 +297,13 @@ for (ii in lks){
                     trans_format('log10', function(x) 10^x)) +
     # coord_trans(y='log10')+
     geom_hline(yintercept=c(1), linetype='dashed', color=c('red')) +
-    ggtitle(paste0(id[match(ii, lks)],": mean annual period of LN > 1 (",round(mean(stats$percentage),0), '% of data',") from ",month.abb[month(as.Date(mean(stats$startday)))],' to ', month.abb[month(as.Date(mean(stats$endday)))],
+    ggtitle(paste0(id[match(ii, lks)],": mean annual period of LN > 1 (",round(mean(stats$percentage),0), '% of data',")"), paste0("from ",month.abb[month(as.Date(mean(stats$startday)))],' to ', month.abb[month(as.Date(mean(stats$endday)))],
                    ' for ',round(mean(stats$duration),0), ' days')) +
     scale_x_date(breaks = "1 month", date_labels = "%b") +
     theme(legend.position="none") +
     theme_minimal() +
-    theme(legend.position="none")
+    theme(legend.position="none",plot.title = element_text(size = 20, face = "bold"),
+          text=element_text(size=20))
   
   df.R = df.R %>%
     mutate(yday = yday(datetime),
@@ -316,7 +325,8 @@ for (ii in lks){
     scale_x_date(breaks = "1 month", date_labels = "%b") +
     theme(legend.position="none") +
     theme_minimal() +
-    theme(legend.position="none")
+    theme(legend.position="none",plot.title = element_text(size = 20, face = "bold"),
+          text=element_text(size=20))
     
     # ggplot(df.R) +
     # geom_line(aes(datetime, Radius)) +
@@ -344,7 +354,7 @@ g2 <- (t2[[4]] | t2[[6]] )/ (t2[[8]] | t2[[7]]) / (t2[[5]] | t2[[1]]) / (t2[[2]]
   
 ggsave(paste0('Figures/LN_oneD.png'), g, width =15, height = 15, unit = 'in' )
 ggsave(paste0('Figures/RR_oneD.png'), g1, width =15, height = 15, unit = 'in' )
-ggsave(paste0('Figures/LN_all_oneD.png'), g2, width =15, height = 15, unit = 'in' )
+ggsave(paste0('Figures/LN_all_oneD.png'), g2, width =18, height = 15, unit = 'in' )
 
   
   
