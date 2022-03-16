@@ -353,8 +353,9 @@ g2 <- (t2[[4]] | t2[[6]] )/ (t2[[8]] | t2[[7]]) / (t2[[5]] | t2[[1]]) / (t2[[2]]
   
   
 ggsave(paste0('Figures/LN_oneD.png'), g, width =15, height = 15, unit = 'in' )
+ggsave(paste0('Figures/Fig_S1a.pdf'), g1, width =15, height = 15, unit = 'in' )
 ggsave(paste0('Figures/RR_oneD.png'), g1, width =15, height = 15, unit = 'in' )
-ggsave(paste0('Figures/LN_all_oneD.png'), g2, width =18, height = 15, unit = 'in' )
+ggsave(paste0('Figures/Fig_S1b.pdf'), g2, width =18, height = 15, unit = 'in' )
 
   
   
