@@ -106,7 +106,7 @@ for (i in 2:nParamEstimates){
 }
 
 
-buoy.freq <- sqrt((get_dens(in1yr$temperature_hypo,0) - get_dens(in1yr$temperature_epi,0))/(in1yr$lower_meta - in1yr$upper_meta)* 9.81/998.2)
+buoy.freq <- ((get_dens(in1yr$temperature_hypo,0) - get_dens(in1yr$temperature_epi,0))/(in1yr$lower_meta - in1yr$upper_meta)* 9.81/998.2)
 buoy.freq[which(buoy.freq<7e-5)] = 7e-5
 kz = 0.00706 * (mean(in1yr$area_surface))^(0.56) * buoy.freq^(-0.43)
 kz[which(is.na(kz))] = 1e-10

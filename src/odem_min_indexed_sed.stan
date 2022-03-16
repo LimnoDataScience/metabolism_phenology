@@ -143,7 +143,7 @@ transformed parameters {
         mineral[i] = MIN[i_Param[i]] * theta0[i-1];
 	      //sed2[i] = SED2[i_Param[i]] *  (fmax((DO_tot[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_tot[i-1]*tau+mu),1e-06))) * theta0[i-1] / mean_depth + DO_tot[i-1] * diff_mol/z_dbl * theta0[i-1] / mean_depth;
         sed_monod[i] = (SED2[i_Param[i]] *  theta0[i-1] )/ mean_depth; //fmax(fmax((DO_tot[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_tot[i-1]*tau+mu),1e-06)),1e-06) *
-        // fmax((DO_tot[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_tot[i-1]*tau+mu),1e-06))
+        // fmax((DO_tot[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_tot[i-1]*tau+mu),1e-06)) 
         // sed_first[i] = fmax(fmax((DO_tot[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_tot[i-1]*tau+mu),1e-06)),1e-06) * (fmax((DO_tot[i-1]*tau + mu),1e-06) * diff_mol/z_dbl * theta0[i-1]) / fmax((volume_tot[i-1]/area_epi[i-1]),1);
         sed_first[i] = ((fmax((DO_tot[i-1]*tau + mu),1e-06) * diff_mol[i-1]/(z_dbl * max_depth) * theta0[i-1]))/tau;
         sed2[i] = sed_monod[i] +  sed_first[i];
@@ -183,7 +183,7 @@ transformed parameters {
     	 mineral[i] = MIN[i_Param[i]] * theta2[i-1];
 	     //sed2[i] = (SED2[i_Param[i]] *  (fmax((DO_hyp[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_hyp[i-1]*tau+mu),1e-06))) * theta2[i-1]) / fmax((volume_hyp[i-1]/area_hyp[i-1]),1) + (DO_hyp[i-1] * diff_mol/z_dbl* theta2[i-1]) / fmax((volume_hyp[i-1]/area_hyp[i-1]),1);
        sed_monod[i] = (SED2[i_Param[i]] *  theta2[i-1]) / fmax((volume_hyp[i-1]/area_hyp[i-1]),1);// fmax(fmax((DO_hyp[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_hyp[i-1]*tau+mu),1e-06)),1e-06) *
-       // fmax((DO_hyp[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_hyp[i-1]*tau+mu),1e-06))
+       // fmax((DO_hyp[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_hyp[i-1]*tau+mu),1e-06)) 
        // sed_first[i] =fmax(fmax((DO_hyp[i-1]*tau+mu),1e-06)/(khalf + fmax((DO_hyp[i-1]*tau+mu),1e-06)),1e-06) *  (fmax((DO_hyp[i-1]*tau + mu),1e-06) * diff_mol/z_dbl* theta2[i-1]) / fmax((volume_hyp[i-1]/area_hyp[i-1]),1);
        sed_first[i] =  ((fmax((DO_hyp[i-1]*tau + mu),1e-06) * diff_mol[i-1]/(fmax((volume_hyp[i-1]/area_hyp[i-1]),1)*z_dbl) * theta2[i-1]) ) /tau;
        sed2[i] = sed_monod[i] +  sed_first[i];
