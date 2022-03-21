@@ -352,9 +352,9 @@ g1 <- (t1[[4]] | t1[[6]] )/ (t1[[8]] | t1[[7]]) / (t1[[5]] | t1[[1]]) / (t1[[2]]
 g2 <- (t2[[4]] | t2[[6]] )/ (t2[[8]] | t2[[7]]) / (t2[[5]] | t2[[1]]) / (t2[[2]] | t2[[3]])+ plot_annotation(tag_levels = 'A')
   
   
-ggsave(paste0('Figures/LN_oneD.png'), g, width =15, height = 15, unit = 'in' )
+ggsave(paste0('Figures/Fig_S1a.png'), g2, width =18, height = 15, unit = 'in' )
 ggsave(paste0('Figures/Fig_S1a.pdf'), g1, width =15, height = 15, unit = 'in' )
-ggsave(paste0('Figures/RR_oneD.png'), g1, width =15, height = 15, unit = 'in' )
+ggsave(paste0('Figures/Fig_S1b.png'), g1, width =15, height = 15, unit = 'in' )
 ggsave(paste0('Figures/Fig_S1b.pdf'), g2, width =18, height = 15, unit = 'in' )
 
   
